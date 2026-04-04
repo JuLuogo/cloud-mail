@@ -192,7 +192,7 @@
               <div class="setting-item">
                 <div><span>{{ $t('sesEnabled') }}</span></div>
                 <div>
-                  <el-switch @change="change" :before-change="beforeChange" :active-value="0" :inactive-value="1"
+                  <el-switch @change="change" :before-change="beforeChange" :active-value="1" :inactive-value="0"
                              v-model="setting.sesEnabled"/>
                 </div>
               </div>

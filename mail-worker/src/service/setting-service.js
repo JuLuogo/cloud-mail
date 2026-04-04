@@ -86,9 +86,10 @@ const settingService = {
 		if (c.env.ses_region) {
 			setting.sesRegion = c.env.ses_region;
 		}
-		if (c.env.ses_enabled) {
+		if (c.env.ses_enabled !== undefined && c.env.ses_enabled !== null) {
 			let sesEnabled = c.env.ses_enabled;
 			if (typeof sesEnabled === 'string') {
+				// 明确判断是否为 true 或 1，避免 "0"、"false" 等字符串被误判
 				sesEnabled = sesEnabled.toLowerCase() === 'true' || sesEnabled === '1';
 			}
 			setting.sesEnabled = sesEnabled ? 1 : 0;
