@@ -149,6 +149,7 @@ const en = {
     resendToken: 'Resend Token',
     sesEnabled: 'Enable SES',
     sesConfig: 'SES Configuration',
+    sendMethodConfig: 'Send Method Configuration',
     emptySesAccessKey: 'SES Access Key cannot be empty',
     emptySesSecretKey: 'SES Secret Key cannot be empty',
     emptySesRegion: 'SES Region cannot be empty',

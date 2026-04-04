@@ -149,6 +149,7 @@ const zh = {
     resendToken: 'Resend Token',
     sesEnabled: '启用 SES',
     sesConfig: 'SES 配置',
+    sendMethodConfig: '发送方式配置',
     emptySesAccessKey: 'SES Access Key 不能为空',
     emptySesSecretKey: 'SES Secret Key 不能为空',
     emptySesRegion: 'SES Region 不能为空',

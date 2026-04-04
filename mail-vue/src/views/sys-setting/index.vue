@@ -204,6 +204,14 @@
                   </el-button>
                 </div>
               </div>
+              <div class="setting-item">
+                <div><span>{{ $t('sendMethodConfig') }}</span></div>
+                <div>
+                  <el-button class="opt-button" size="small" type="primary" @click="openSendMethodConfig">
+                    <Icon icon="fluent:settings-48-regular" width="18" height="18"/>
+                  </el-button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -612,6 +620,15 @@
         <el-table :data="resendList">
           <el-table-column :min-width="emailColumnWidth" property="key" :label="$t('domain')"
                            :show-overflow-tooltip="true"/>
+          <el-table-column :width="tokenColumnWidth" property="value" label="Token" fixed="right"
+                           :show-overflow-tooltip="true"/>
+        </el-table>
+      </el-dialog>
+      <!-- 发送方式配置弹窗 -->
+      <el-dialog class="send-method-table" v-model="showSendMethodConfig" :title="t('sendMethodConfig')">
+        <el-table :data="sendMethodList">
+          <el-table-column :min-width="emailColumnWidth" property="key" :label="$t('domain')"
+                           :show-overflow-tooltip="true"/>
           <el-table-column :width="120" label="发送方式" fixed="right">
             <template #default="scope">
               <el-select v-model="scope.row.sendMethod" @change="changeSendMethod(scope.row.key, scope.row.sendMethod)" size="small">
@@ -621,8 +638,6 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column :width="tokenColumnWidth" property="value" label="Token" fixed="right"
-                           :show-overflow-tooltip="true"/>
         </el-table>
       </el-dialog>
       <el-dialog v-model="regVerifyCountShow" :title="$t('rulesVerifyTitle',{count: regVerifyCount})"
@@ -805,6 +820,7 @@ const thirdEmailShow = ref(false)
 const forwardRulesShow = ref(false)
 const emailPrefixShow = ref(false)
 const showResendList = ref(false)
+const showSendMethodConfig = ref(false)
 const settingStore = useSettingStore();
 const uiStore = useUiStore();
 const {settings: setting} = storeToRefs(settingStore);
@@ -940,6 +956,47 @@ function resetAddS3Form() {
   s3.forcePathStyle = setting.value.forcePathStyle
 }
 
+const sendMethodList = computed(() => {
+  let list = []
+  let domains = new Set()
+
+  // 收集所有域名：包括 resendTokens、sesTokens、以及domainList中的所有域名
+  if (setting.value.resendTokens) {
+    Object.keys(setting.value.resendTokens).forEach(domain => domains.add(domain))
+  }
+
+  if (setting.value.sesTokens) {
+    Object.keys(setting.value.sesTokens).forEach(domain => domains.add(domain))
+  }
+
+  if (setting.value.domainList) {
+    setting.value.domainList.forEach(domain => {
+      // domainList中的域名是@example.com格式的
+      if (domain.startsWith('@')) {
+        domains.add(domain.slice(1))
+      } else {
+        domains.add(domain)
+      }
+    })
+  }
+
+  // 生成列表
+  list = Array.from(domains).map(domain => {
+    return {
+      key: domain,
+      sendMethod: setting.value.sendMethodConfig?.[domain] || 'auto'
+    }
+  }).sort((a, b) => a.key.localeCompare(b.key))
+
+  // 计算域名列宽度
+  if (list.length > 0) {
+    const key = list.reduce((a, b) => compareByLengthAndUpperCase(a, b, 'key')).key
+    emailColumnWidth.value = getTextWidth(key) + 30
+  }
+
+  return list
+})
+
 const resendList = computed(() => {
 
   let list = Object.keys(setting.value.resendTokens).map(key => {
@@ -1027,6 +1084,10 @@ function openNoticePopupSetting() {
 
 function openResendList() {
   showResendList.value = true
+}
+
+function openSendMethodConfig() {
+  showSendMethodConfig.value = true
 }
 
 function resetNoticeForm() {
