@@ -76,6 +76,24 @@ const settingService = {
 		setting.linuxdoCallbackUrl = c.env.linuxdo_callback_url;
 		setting.linuxdoSwitch = linuxdoSwitch;
 
+		// 从环境变量读取 SES 配置（如果有）
+		if (c.env.ses_access_key) {
+			setting.sesAccessKey = c.env.ses_access_key;
+		}
+		if (c.env.ses_secret_key) {
+			setting.sesSecretKey = c.env.ses_secret_key;
+		}
+		if (c.env.ses_region) {
+			setting.sesRegion = c.env.ses_region;
+		}
+		if (c.env.ses_enabled) {
+			let sesEnabled = c.env.ses_enabled;
+			if (typeof sesEnabled === 'string') {
+				sesEnabled = sesEnabled.toLowerCase() === 'true' || sesEnabled === '1';
+			}
+			setting.sesEnabled = sesEnabled ? 1 : 0;
+		}
+
 		setting.emailPrefixFilter = setting.emailPrefixFilter.split(",").filter(Boolean);
 
 		c.set?.('setting', setting);

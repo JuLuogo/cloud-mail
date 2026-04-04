@@ -34,6 +34,10 @@ crons = ["0 16 * * *"]	#定时任务每天晚上12点执行
 #domain = []				#邮件域名可可配置多个 示例: ["example1.com","example2.com"]
 #admin = ""				#管理员的邮箱	示例: admin@example.com
 #jwt_secret = ""			#jwt令牌的密钥,随便填一串字符串
+#ses_access_key = ""		#AWS SES 访问密钥
+#ses_secret_key = ""		#AWS SES 秘密密钥
+#ses_region = ""			#AWS SES 区域
+#ses_enabled = false		#是否启用 SES 邮件发送
 
 [build]
 command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"

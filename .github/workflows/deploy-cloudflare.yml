@@ -29,6 +29,10 @@ jobs:
       LINUXDO_CLIENT_SECRET: ${{ secrets.LINUXDO_CLIENT_SECRET || vars.LINUXDO_CLIENT_SECRET }}
       LINUXDO_CALLBACK_URL: ${{ secrets.LINUXDO_CALLBACK_URL || vars.LINUXDO_CALLBACK_URL }}
       LINUXDO_SWITCH: ${{ secrets.LINUXDO_SWITCH || vars.LINUXDO_SWITCH }}
+      SES_ACCESS_KEY: ${{ secrets.SES_ACCESS_KEY || vars.SES_ACCESS_KEY }}
+      SES_SECRET_KEY: ${{ secrets.SES_SECRET_KEY || vars.SES_SECRET_KEY }}
+      SES_REGION: ${{ secrets.SES_REGION || vars.SES_REGION }}
+      SES_ENABLED: ${{ secrets.SES_ENABLED || vars.SES_ENABLED }}
 
     outputs:
       worker_url: ${{ steps.deploy.outputs.worker_url }}
@@ -106,6 +110,10 @@ jobs:
           if [ -z "$LINUXDO_CLIENT_ID" ] || [ -z "$LINUXDO_CLIENT_SECRET" ]; then
             sed -i '/^linuxdo_client_id = /,/^linuxdo_switch = /d' "$CONFIG_FILE"
           fi
+
+          if [ -z "$SES_ACCESS_KEY" ] || [ -z "$SES_SECRET_KEY" ]; then
+            sed -i '/^ses_access_key = /,/^ses_enabled = /d' "$CONFIG_FILE"
+          fi
           
           if [ -z "$CUSTOM_DOMAIN" ]; then
             sed -i '/\[\[routes\]\]/,/^$/d' "$CONFIG_FILE"
@@ -122,6 +130,10 @@ jobs:
           sed -i "s|\${LINUXDO_CLIENT_SECRET}|${LINUXDO_CLIENT_SECRET}|g" "$CONFIG_FILE"
           sed -i "s|\${LINUXDO_CALLBACK_URL}|${LINUXDO_CALLBACK_URL}|g" "$CONFIG_FILE"
           sed -i "s|\${LINUXDO_SWITCH}|${LINUXDO_SWITCH}|g" "$CONFIG_FILE"
+          sed -i "s|\${SES_ACCESS_KEY}|${SES_ACCESS_KEY}|g" "$CONFIG_FILE"
+          sed -i "s|\${SES_SECRET_KEY}|${SES_SECRET_KEY}|g" "$CONFIG_FILE"
+          sed -i "s|\${SES_REGION}|${SES_REGION}|g" "$CONFIG_FILE"
+          sed -i "s|\${SES_ENABLED}|${SES_ENABLED}|g" "$CONFIG_FILE"
           
           echo "✅ Environment setup completed."
 
