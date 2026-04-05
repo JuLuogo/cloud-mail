@@ -4,6 +4,7 @@ import { and, eq, desc } from 'drizzle-orm';
 import { t } from '../i18n/i18n';
 import BizError from '../error/biz-error';
 import emailUtils from '../utils/email-utils';
+import roleService from './role-service';
 
 const forwardRuleService = {
 
@@ -45,6 +46,14 @@ const forwardRuleService = {
 			throw new BizError(t('forwardPatternDomainInvalid'));
 		}
 
+		// 非管理员用户需要验证域名权限
+		if (userId !== 0) {
+			const { availDomain } = await roleService.selectByUserId(c, userId);
+			if (!roleService.hasAvailDomainPerm(availDomain, pattern)) {
+				throw new BizError(t('noDomainPermAdd'));
+			}
+		}
+
 		await orm(c).insert(forwardRule).values({
 			userId,
 			pattern,
@@ -78,6 +87,13 @@ const forwardRuleService = {
 			const patternDomain = emailUtils.getDomain(pattern);
 			if (!patternDomain || patternDomain.includes('*')) {
 				throw new BizError(t('forwardPatternDomainInvalid'));
+			}
+			// 非管理员用户需要验证域名权限
+			if (rule.userId !== 0) {
+				const { availDomain } = await roleService.selectByUserId(c, rule.userId);
+				if (!roleService.hasAvailDomainPerm(availDomain, pattern)) {
+					throw new BizError(t('noDomainPermAdd'));
+				}
 			}
 		}
 
@@ -144,9 +160,9 @@ const forwardRuleService = {
 	},
 
 	/**
-	 * 获取所有启用的全局规则
+	 * 获取所有启用的规则（全局+用户）
 	 */
-	getEnabledGlobalRules(c) {
+	async getEnabledRules(c) {
 		return orm(c).select().from(forwardRule)
 			.where(and(
 				eq(forwardRule.isDel, 0),
@@ -186,10 +202,21 @@ const forwardRuleService = {
 	 * @returns {Object|null} 匹配的规则
 	 */
 	async findMatchingRule(c, email) {
-		const rules = await this.getEnabledGlobalRules(c);
+		const rules = await this.getEnabledRules(c);
 
 		for (const rule of rules) {
-			if (this.matchWildcardEmail(email, rule.pattern)) {
+			if (!this.matchWildcardEmail(email, rule.pattern)) {
+				continue;
+			}
+
+			// 全局规则(userId=0)直接匹配
+			if (rule.userId === 0) {
+				return rule;
+			}
+
+			// 用户规则需要验证域名权限
+			const { availDomain } = await roleService.selectByUserId(c, rule.userId);
+			if (roleService.hasAvailDomainPerm(availDomain, email)) {
 				return rule;
 			}
 		}
