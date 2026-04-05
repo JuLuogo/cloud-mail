@@ -47,15 +47,16 @@ export async function email(message, env, ctx) {
 
 		const account = await accountService.selectByEmailIncludeDel({ env: env }, message.to);
 
-		if (!account && noRecipient === settingConst.noRecipient.CLOSE) {
-			message.setReject('Recipient not found');
-			return;
-		}
-
-		// Catch-all 规则匹配
+		// Catch-all 规则匹配（优先于 noRecipient 检查）
 		let forwardRule = null;
 		if (!account) {
 			forwardRule = await forwardRuleService.findMatchingRule({ env: env }, message.to);
+		}
+
+		// 如果没有匹配的 catch-all 规则，且 noRecipient 关闭，则拒绝邮件
+		if (!account && !forwardRule && noRecipient === settingConst.noRecipient.CLOSE) {
+			message.setReject('Recipient not found');
+			return;
 		}
 
 		let userRow = {}

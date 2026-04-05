@@ -1006,6 +1006,9 @@ async function setAvailDomain() {
       type: "success",
       plain: true
     })
+  } catch (e) {
+    console.error('Failed to set avail domain:', e)
+    ElMessage.error(e?.message || t('saveFailedMsg') || 'Save failed')
   } finally {
     settingLoading.value = false
   }

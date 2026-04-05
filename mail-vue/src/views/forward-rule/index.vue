@@ -148,6 +148,7 @@ async function submit() {
     loadRules()
   } catch (e) {
     console.error('Failed to save forward rule:', e)
+    ElMessage.error(e?.message || t('saveFailedMsg') || 'Save failed')
   } finally {
     submitLoading.value = false
   }
