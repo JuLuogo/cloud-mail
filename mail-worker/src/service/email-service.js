@@ -944,7 +944,21 @@ const emailService = {
 
 		const [total] = await Promise.all([totalQuery]);
 
-		return { list, total: total.total };
+		// 获取最新归档邮件
+		const latestArchiveQuery = orm(c).select().from(email)
+			.where(and(
+				eq(email.userId, userId),
+				eq(email.isArchive, 1),
+				eq(email.isDel, isDel.NORMAL)
+			))
+			.orderBy(desc(email.emailId)).limit(1).get();
+
+		let latestEmail = await latestArchiveQuery;
+		if (!latestEmail) {
+			latestEmail = { emailId: 0, userId };
+		}
+
+		return { list, total: total.total, latestEmail };
 	},
 
 	async search(c, params, userId) {

@@ -273,7 +273,7 @@ function openAddContact() {
     if (key === 'groupId') contactForm[key] = selectedGroupId.value === 'star' ? null : selectedGroupId.value
     else contactForm[key] = ''
   })
-  contactForm.groupId = selectedGroupId === 'star' ? null : selectedGroupId
+  contactForm.groupId = selectedGroupId.value === 'star' ? null : selectedGroupId.value
   contactForm.contactId = null
   showContactDialog.value = true
 }
@@ -299,6 +299,7 @@ async function submitContact() {
     showContactDialog.value = false
     ElMessage.success(t('saveSuccessMsg'))
     loadContacts()
+    loadGroups()
   } catch (e) {
     console.error('Failed to save contact:', e)
   } finally {

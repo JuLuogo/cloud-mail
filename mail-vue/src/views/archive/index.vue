@@ -5,7 +5,7 @@
                :emailDelete="handleDelete"
                :star-add="starAdd"
                :star-cancel="starCancel"
-               :email-archive="unarchiveEmail"
+               :email-archive="emailArchive"
                @jump="jumpContent"
                actionLeft="6px"
                :show-account-icon="false"
@@ -14,7 +14,7 @@
 
 <script setup>
 import emailScroll from "@/components/email-scroll/index.vue"
-import {archiveList, emailArchive, emailUnarchive, emailDelete} from "@/request/email.js";
+import {archiveList, emailArchive, emailDelete} from "@/request/email.js";
 import {starAdd, starCancel} from "@/request/star.js";
 import {useEmailStore} from "@/store/email.js";
 import {defineOptions, onMounted, ref} from "vue";
@@ -39,10 +39,7 @@ function getArchiveList(emailId, size) {
   return archiveList({ emailId, size })
 }
 
-function unarchiveEmail(emailId) {
-  return emailUnarchive(emailId)
-}
-
+// 在归档页删除就是取消归档
 function handleDelete(emailIds) {
   return emailArchive(emailIds)
 }
