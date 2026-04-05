@@ -46,6 +46,7 @@ const userService = {
 		user.permKeys = permKeys;
 		user.role = roleRow;
 		user.type = userRow.type;
+		user.forwardStatus = userRow.forwardStatus;
 
 		if (c.env.admin === userRow.email) {
 			user.role = constant.ADMIN_ROLE
@@ -455,6 +456,18 @@ const userService = {
 			targetDesc: userRow?.email,
 			detail: { availDomain, email: userRow?.email }
 		});
+	},
+
+	async setForwardStatus(c, params, operatorInfo) {
+		const { forwardStatus } = params;
+		const currentUser = userContext.getUser(c);
+		const userId = currentUser.userId;
+
+		await orm(c)
+			.update(user)
+			.set({ forwardStatus })
+			.where(eq(user.userId, userId))
+			.run();
 	}
 };
 

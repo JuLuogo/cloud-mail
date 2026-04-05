@@ -256,9 +256,17 @@ const forwardRuleService = {
 
 			// 用户规则需要验证域名权限
 			const availDomain = await this.getUserAvailDomain(c, rule.userId);
-			if (roleService.hasAvailDomainPerm(availDomain, email)) {
-				return rule;
+			if (!roleService.hasAvailDomainPerm(availDomain, email)) {
+				continue;
 			}
+
+			// 检查用户的 forwardStatus 是否开启
+			const ruleOwner = await orm(c).select({ forwardStatus: user.forwardStatus }).from(user).where(eq(user.userId, rule.userId)).get();
+			if (!ruleOwner || ruleOwner.forwardStatus !== 1) {
+				continue;
+			}
+
+			return rule;
 		}
 
 		return null;

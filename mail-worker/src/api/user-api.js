@@ -54,6 +54,11 @@ app.put('/user/setAvailDomain', async (c) => {
 	return c.json(result.ok());
 });
 
+app.put('/user/setForwardStatus', async (c) => {
+	await userService.setForwardStatus(c, await c.req.json(), getOperatorInfo(c));
+	return c.json(result.ok());
+});
+
 app.get('/user/allAccount', async (c) => {
 	const data = await accountService.allAccount(c, c.req.query());
 	return c.json(result.ok(data));

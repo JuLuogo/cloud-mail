@@ -126,7 +126,7 @@
   </div>
 </template>
 <script setup>
-import {reactive, ref, defineOptions, onMounted} from 'vue'
+import {reactive, ref, defineOptions, onMounted, computed} from 'vue'
 import {resetPassword, userDelete} from "@/request/my.js";
 import {useUserStore} from "@/store/user.js";
 import router from "@/router/index.js";
@@ -135,6 +135,7 @@ import {useAccountStore} from "@/store/account.js";
 import {useI18n} from "vue-i18n";
 import {twoFactorSetup, twoFactorEnable, twoFactorDisable, twoFactorStatus} from "@/request/2fa.js";
 import {forwardRuleList, forwardRuleAdd, forwardRuleUpdate, forwardRuleDelete, forwardRuleToggle} from "@/request/forward-rule.js";
+import {userSetForwardStatus} from "@/request/user.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {Icon} from "@iconify/vue";
 
@@ -144,7 +145,10 @@ const userStore = useUserStore();
 
 // 转发规则相关
 const hasForwardDomain = ref(false) // 是否有可用域名权限
-const forwardEnabled = ref(false) // 是否启用转发
+const forwardEnabled = computed({
+  get: () => userStore.user.forwardStatus === 1,
+  set: (val) => val
+}) // 是否启用转发
 const forwardRules = ref([])
 const ruleDialog = reactive({
   show: false,
@@ -452,8 +456,15 @@ async function toggleRule(rule) {
 }
 
 async function toggleForward(val) {
-  // 转发启用/禁用功能预留
-  console.log('Forward enabled:', val)
+  try {
+    await userSetForwardStatus({ forwardStatus: val ? 1 : 0 })
+    userStore.user.forwardStatus = val ? 1 : 0
+    ElMessage.success(t('saveSuccessMsg'))
+  } catch (e) {
+    console.error('Failed to toggle forward:', e)
+    // Revert the switch state
+    userStore.user.forwardStatus = val ? 0 : 1
+  }
 }
 
 </script>

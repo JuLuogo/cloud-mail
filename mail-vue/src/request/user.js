@@ -45,3 +45,7 @@ export function userDeleteAccount(accountId) {
 export function userSetAvailDomain(params) {
     return http.put('/user/setAvailDomain', params)
 }
+
+export function userSetForwardStatus(params) {
+    return http.put('/user/setForwardStatus', params)
+}
