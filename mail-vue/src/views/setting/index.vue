@@ -384,21 +384,17 @@ async function loadForwardRules() {
 
 function openAddRule() {
   ruleDialog.isEdit = false
-  ruleDialog.form = {
-    ruleId: null,
-    pattern: '',
-    forwardTo: ''
-  }
+  ruleDialog.form.ruleId = null
+  ruleDialog.form.pattern = ''
+  ruleDialog.form.forwardTo = ''
   ruleDialog.show = true
 }
 
 function editRule(rule) {
   ruleDialog.isEdit = true
-  ruleDialog.form = {
-    ruleId: rule.ruleId || null,
-    pattern: rule.pattern || '',
-    forwardTo: rule.forwardTo || ''
-  }
+  ruleDialog.form.ruleId = rule.ruleId || null
+  ruleDialog.form.pattern = rule.pattern || ''
+  ruleDialog.form.forwardTo = rule.forwardTo || ''
   ruleDialog.show = true
 }
 
