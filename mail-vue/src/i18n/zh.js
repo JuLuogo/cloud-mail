@@ -4,6 +4,8 @@ const zh = {
     sent: '已发送',
     starred: '星标邮件',
     archive: '归档邮件',
+    unarchive: '取消归档',
+    archiveSuccessMsg: '归档成功',
     contacts: '联系人',
     groups: '分组',
     allContacts: '全部联系人',

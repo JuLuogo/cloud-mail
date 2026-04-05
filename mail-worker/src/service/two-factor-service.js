@@ -45,7 +45,7 @@ const twoFactorService = {
 	async enable(c, params, userId) {
 		const { code, secret } = params;
 
-		if (!this.verifyCode(secret, code)) {
+		if (!await this.verifyCode(secret, code)) {
 			throw new BizError(t('invalidTwoFactorCode'), 400);
 		}
 
@@ -66,7 +66,7 @@ const twoFactorService = {
 			throw new BizError(t('twoFactorNotEnabled'));
 		}
 
-		if (!this.verifyCode(userRow.totpSecret, code)) {
+		if (!await this.verifyCode(userRow.totpSecret, code)) {
 			throw new BizError(t('invalidTwoFactorCode'), 400);
 		}
 
@@ -87,7 +87,7 @@ const twoFactorService = {
 			return { verified: false, need2FA: false };
 		}
 
-		const verified = this.verifyCode(userRow.totpSecret, code);
+		const verified = await this.verifyCode(userRow.totpSecret, code);
 		return { verified, need2FA: true };
 	},
 
@@ -97,12 +97,12 @@ const twoFactorService = {
 		return userRow?.totpEnabled === 1;
 	},
 
-	verifyCode(secret, code) {
+	async verifyCode(secret, code) {
 		const timeStep = Math.floor(Date.now() / 30000);
 		const codeInt = parseInt(code, 10);
 
 		for (let i = -1; i <= 1; i++) {
-			const expectedCode = this.calculateTOTP(secret, timeStep + i);
+			const expectedCode = await this.calculateTOTP(secret, timeStep + i);
 			if (expectedCode === codeInt) {
 				return true;
 			}
@@ -110,7 +110,7 @@ const twoFactorService = {
 		return false;
 	},
 
-	calculateTOTP(secret, timeStep) {
+	async calculateTOTP(secret, timeStep) {
 		const timeBytes = new Uint8Array(8);
 		for (let i = 7; i >= 0; i--) {
 			timeBytes[i] = timeStep & 0xff;
@@ -119,20 +119,20 @@ const twoFactorService = {
 
 		const key = this.base32Decode(secret);
 
-		const hmacSha1 = async (key, data) => {
-			const cryptoKey = await crypto.subtle.importKey(
-				'raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
-			);
-			const signature = await crypto.subtle.sign('HMAC', cryptoKey, data);
-			return new Uint8Array(signature);
-		};
+		// 使用 Web Crypto API 计算 HMAC-SHA1
+		const cryptoKey = await crypto.subtle.importKey(
+			'raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
+		);
+		const signature = await crypto.subtle.sign('HMAC', cryptoKey, timeBytes);
+		const hmacKey = new Uint8Array(signature);
 
-		let signature;
-		(async () => {
-			signature = await hmacSha1(key, timeBytes);
-		})();
+		const offset = hmacKey[hmacKey.length - 1] & 0x0f;
+		const binary = ((hmacKey[offset] & 0x7f) << 24)
+			| ((hmacKey[offset + 1] & 0xff) << 16)
+			| ((hmacKey[offset + 2] & 0xff) << 8)
+			| (hmacKey[offset + 3] & 0xff);
 
-		return 0;
+		return binary % 1000000;
 	},
 
 	base32Encode(data) {

@@ -270,7 +270,7 @@ function search() {
 function openAddContact() {
   isEditContact.value = false
   Object.keys(contactForm).forEach(key => {
-    if (key === 'groupId') contactForm[key] = selectedGroupIdId === 'star' ? null : selectedGroupId
+    if (key === 'groupId') contactForm[key] = selectedGroupId.value === 'star' ? null : selectedGroupId.value
     else contactForm[key] = ''
   })
   contactForm.groupId = selectedGroupId === 'star' ? null : selectedGroupId

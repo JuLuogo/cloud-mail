@@ -184,6 +184,14 @@
               </div>
             </template>
           </el-dropdown-item>
+          <el-dropdown-item v-if="['email','star'].includes(props.type)" @click="archiveChange(rightClickEmail)">
+            <template #default>
+              <div class="right-dropdown-item">
+                <Icon icon="material-symbols:archive-outline" width="20" height="20"/>
+                <span>{{ rightClickEmail.isArchive ? t('unarchive') : t('archive') }}</span>
+              </div>
+            </template>
+          </el-dropdown-item>
           <el-dropdown-item v-if="props.type === 'all-email'" @click="handleSearch('user', rightClickEmail.userEmail)">
             <template #default>
               <div class="right-dropdown-item">
@@ -242,6 +250,7 @@ const props = defineProps({
   emailRead: Function,
   starAdd: Function,
   starCancel: Function,
+  emailArchive: Function,
   cancelSuccess: Function,
   starSuccess: Function,
   actionLeft: {
@@ -594,6 +603,25 @@ function starChange(email) {
     }).catch(e => {
       console.error(e)
       email.isStar = 1;
+    })
+  }
+}
+
+function archiveChange(email) {
+  if (props.emailArchive) {
+    const action = email.isArchive ? 'unarchive' : 'archive'
+    props.emailArchive(email.emailId, !email.isArchive).then(() => {
+      ElMessage({
+        message: t('archiveSuccessMsg'),
+        type: 'success',
+        plain: true,
+      })
+      // Remove from list after archive
+      if (!email.isArchive) {
+        emailStore.deleteIds = [email.emailId];
+      }
+    }).catch(e => {
+      console.error(e)
     })
   }
 }

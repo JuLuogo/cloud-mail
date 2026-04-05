@@ -4,6 +4,8 @@ const en = {
     sent: 'Sent',
     starred: 'Starred',
     archive: 'Archive',
+    unarchive: 'Unarchive',
+    archiveSuccessMsg: 'Archive successful',
     contacts: 'Contacts',
     groups: 'Groups',
     allContacts: 'All Contacts',

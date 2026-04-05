@@ -25,8 +25,12 @@ export function emailSend(form,progress) {
     })
 }
 
-export function emailArchive(emailId) {
-    return http.put('/email/archive', {emailId})
+export function emailArchive(emailId, isArchive) {
+    if (isArchive) {
+        return http.put('/email/archive', {emailId})
+    } else {
+        return http.put('/email/unarchive', {emailId})
+    }
 }
 
 export function emailUnarchive(emailId) {
