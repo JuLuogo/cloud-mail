@@ -11,10 +11,20 @@ const contactService = {
 		size = Number(size) || 20;
 		num = Number(num) || 1;
 
+		// 转换字符串 'null' 为真正的 null
+		if (groupId === 'null' || groupId === '') {
+			groupId = null;
+		} else {
+			groupId = Number(groupId);
+		}
+
+		// 转换字符串 '0' 为 0
+		isStar = Number(isStar) || 0;
+
 		const conditions = [eq(contact.userId, userId), eq(contact.isDel, 0)];
 
 		if (groupId) {
-			conditions.push(eq(contact.groupId, Number(groupId)));
+			conditions.push(eq(contact.groupId, groupId));
 		}
 
 		if (keyword) {
