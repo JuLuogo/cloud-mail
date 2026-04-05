@@ -54,14 +54,4 @@ app.delete('/user/deleteAccount', async (c) => {
 	return c.json(result.ok());
 });
 
-app.put('/user/setForward', async (c) => {
-	await userService.setForward(c, await c.req.json());
-	return c.json(result.ok());
-});
-
-app.get('/user/getForward', async (c) => {
-	const data = await userService.getForward(c, c.req.query());
-	return c.json(result.ok(data));
-});
-
 

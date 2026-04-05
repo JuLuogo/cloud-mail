@@ -147,36 +147,20 @@ export async function email(message, env, ctx) {
 			await telegramService.sendEmailToBot({ env }, emailRow)
 		}
 
-		// 用户级转发设置优先于全局设置
-		// userRow.forwardStatus: 0=继承全局, 1=开启, 2=关闭
-		let shouldForward = false;
-		let forwardToEmail = '';
+		// 用户级转发功能已屏蔽，暂时只使用全局转发设置
+		// TODO: 后续版本重新启用用户级转发
+		// if (userRow && userRow.forwardStatus === 1) {
+		// 	// 用户开启了转发，使用用户的转发邮箱
+		// } else if (userRow && userRow.forwardStatus === 2) {
+		// 	// 用户关闭了转发
+		// } else {
+		// 	// 用户继承全局设置 或 无 account/userRow
+		// }
 
-		if (userRow && userRow.forwardStatus === 1) {
-			// 用户开启了转发，使用用户的转发邮箱
-			shouldForward = true;
-			forwardToEmail = userRow.forwardEmail;
-		} else if (userRow && userRow.forwardStatus === 2) {
-			// 用户关闭了转发
-			shouldForward = false;
-		} else if (userRow && userRow.forwardStatus === 0) {
-			// 用户继承全局设置
-			if (forwardStatus === settingConst.forwardStatus.OPEN && forwardEmail) {
-				shouldForward = true;
-				forwardToEmail = forwardEmail;
-			}
-		} else {
-			// 没有 account 或 userRow，使用全局设置
-			if (forwardStatus === settingConst.forwardStatus.OPEN && forwardEmail) {
-				shouldForward = true;
-				forwardToEmail = forwardEmail;
-			}
-		}
+		//转发到其他邮箱（仅使用全局设置）
+		if (forwardStatus === settingConst.forwardStatus.OPEN && forwardEmail) {
 
-		//转发到其他邮箱
-		if (shouldForward && forwardToEmail) {
-
-			const emails = forwardToEmail.split(',');
+			const emails = forwardEmail.split(',');
 
 			await Promise.all(emails.map(async email => {
 

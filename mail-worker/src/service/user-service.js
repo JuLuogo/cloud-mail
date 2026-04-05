@@ -12,7 +12,6 @@ import dayjs from 'dayjs';
 import permService from './perm-service';
 import roleService from './role-service';
 import emailUtils from '../utils/email-utils';
-import verifyUtils from '../utils/verify-utils';
 import saltHashUtils from '../utils/crypto-utils';
 import constant from '../const/constant';
 import { t } from '../i18n/i18n'
@@ -374,38 +373,6 @@ const userService = {
 			.where(eq(user.regKeyId, regKeyId))
 			.orderBy(desc(user.userId))
 			.all();
-	},
-
-	async setForward(c, params) {
-		const { userId, forwardStatus, forwardEmail } = params;
-
-		if (forwardStatus === 1 && !forwardEmail) {
-			throw new BizError(t('forwardEmailRequired'));
-		}
-
-		if (forwardEmail) {
-			const emails = forwardEmail.split(',');
-			for (const email of emails) {
-				if (!verifyUtils.isEmail(email.trim())) {
-					throw new BizError(t('invalidForwardEmail'));
-				}
-			}
-		}
-
-		await orm(c)
-			.update(user)
-			.set({ forwardStatus, forwardEmail })
-			.where(eq(user.userId, userId))
-			.run();
-	},
-
-	async getForward(c, params) {
-		const { userId } = params;
-		const userRow = await userService.selectById(c, userId);
-		return {
-			forwardStatus: userRow.forwardStatus,
-			forwardEmail: userRow.forwardEmail
-		};
 	}
 };
 

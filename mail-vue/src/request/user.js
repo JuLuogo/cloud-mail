@@ -41,11 +41,3 @@ export function userAllAccount(userId, num, size) {
 export function userDeleteAccount(accountId) {
     return http.delete('/user/deleteAccount', {params:{accountId}})
 }
-
-export function userSetForward(params) {
-    return http.put('/user/setForward', params)
-}
-
-export function userGetForward(userId) {
-    return http.get('/user/getForward', {params:{userId}})
-}

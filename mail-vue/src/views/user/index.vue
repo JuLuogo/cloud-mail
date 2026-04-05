@@ -97,7 +97,6 @@
                       <el-dropdown-item v-else @click="restore(props.row)">{{ $t('restore') }}</el-dropdown-item>
                     </template>
                     <el-dropdown-item @click="openAccountList(props.row.userId)" >{{ $t('account') }}</el-dropdown-item>
-                    <el-dropdown-item @click="openSetForward(props.row)" >{{ $t('setForward') }}</el-dropdown-item>
                     <el-dropdown-item @click="openDetails(props.row)" >{{ $t('details') }}</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
@@ -290,26 +289,6 @@
         </div>
       </div>
     </el-dialog>
-    <el-dialog class="dialog" v-model="setForwardShow" :title="$t('setForward')" @closed="resetForwardForm">
-      <div class="dialog-box">
-        <div class="forward-status">
-          <el-radio-group v-model="forwardForm.forwardStatus">
-            <el-radio :value="0">{{ $t('followGlobal') }}</el-radio>
-            <el-radio :value="1">{{ $t('active') }}</el-radio>
-            <el-radio :value="2">{{ $t('btnBan') }}</el-radio>
-          </el-radio-group>
-        </div>
-        <el-input
-            v-model="forwardForm.forwardEmail"
-            type="text"
-            :placeholder="$t('forwardEmailPlaceholder')"
-            :disabled="forwardForm.forwardStatus === 0 || forwardForm.forwardStatus === 2"
-        />
-        <el-button class="btn" type="primary" :loading="settingLoading" @click="saveForward">
-          {{ $t('save') }}
-        </el-button>
-      </div>
-    </el-dialog>
     <el-dropdown
         :show-timeout="0"
         :hide-timeout="0"
@@ -363,14 +342,6 @@
               </div>
             </template>
           </el-dropdown-item>
-          <el-dropdown-item @click="openSetForward(rightClickUser)" >
-            <template #default>
-              <div class="right-dropdown-item" >
-                <Icon icon="material-symbols:forward" width="20" height="20" />
-                <span>{{ t('setForward') }}</span>
-              </div>
-            </template>
-          </el-dropdown-item>
           <el-dropdown-item @click="openDetails(rightClickUser)" >
             <template #default>
               <div class="right-dropdown-item" >
@@ -405,8 +376,7 @@ import {
   userRestSendCount,
   userRestore,
   userDeleteAccount,
-  userAllAccount,
-  userSetForward
+  userAllAccount
 } from '@/request/user.js'
 import {roleSelectUse} from "@/request/role.js";
 import {Icon} from "@iconify/vue";
@@ -492,7 +462,6 @@ const accountShow = ref(false)
 const addLoading = ref(false);
 const setTypeShow = ref(false)
 const setPwdShow = ref(false)
-const setForwardShow = ref(false)
 const pagerCount = ref(10)
 const settingLoading = ref(false)
 const tableLoading = ref(true)
@@ -504,11 +473,6 @@ const accountParams = reactive({
   num: 0,
   total: 0,
   userId: 0,
-})
-const forwardForm = reactive({
-  userId: 0,
-  forwardStatus: 0,
-  forwardEmail: ''
 })
 
 roleSelectUse().then(list => {
@@ -1001,47 +965,6 @@ function openSetType(user) {
 function openSetPwd(user) {
   userForm.userId = user.userId
   setPwdShow.value = true
-}
-
-function openSetForward(user) {
-  forwardForm.userId = user.userId
-  forwardForm.forwardStatus = user.forwardStatus || 0
-  forwardForm.forwardEmail = user.forwardEmail || ''
-  setForwardShow.value = true
-}
-
-function resetForwardForm() {
-  forwardForm.userId = 0
-  forwardForm.forwardStatus = 0
-  forwardForm.forwardEmail = ''
-}
-
-async function saveForward() {
-  if (forwardForm.forwardStatus === 1 && !forwardForm.forwardEmail) {
-    ElMessage({
-      message: t('forwardEmailRequired'),
-      type: 'error',
-      plain: true
-    })
-    return
-  }
-  settingLoading.value = true
-  try {
-    await userSetForward({
-      userId: forwardForm.userId,
-      forwardStatus: forwardForm.forwardStatus,
-      forwardEmail: forwardForm.forwardEmail
-    })
-    ElMessage({
-      message: t('saveSuccessMsg'),
-      type: "success",
-      plain: true
-    })
-    setForwardShow.value = false
-    getUserList(false)
-  } finally {
-    settingLoading.value = false
-  }
 }
 
 function refresh() {
