@@ -12,6 +12,7 @@ import dayjs from 'dayjs';
 import permService from './perm-service';
 import roleService from './role-service';
 import emailUtils from '../utils/email-utils';
+import verifyUtils from '../utils/verify-utils';
 import saltHashUtils from '../utils/crypto-utils';
 import constant from '../const/constant';
 import { t } from '../i18n/i18n'
@@ -385,7 +386,7 @@ const userService = {
 		if (forwardEmail) {
 			const emails = forwardEmail.split(',');
 			for (const email of emails) {
-				if (!emailUtils.isEmail(email.trim())) {
+				if (!verifyUtils.isEmail(email.trim())) {
 					throw new BizError(t('invalidForwardEmail'));
 				}
 			}
