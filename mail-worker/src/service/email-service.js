@@ -906,10 +906,13 @@ const emailService = {
 			eq(email.isDel, isDel.NORMAL)
 		];
 
-		if (timeSort) {
-			conditions.push(gt(email.emailId, emailId));
-		} else {
-			conditions.push(lt(email.emailId, emailId));
+		// 只有在非首次加载时才添加 emailId 条件
+		if (emailId > 0) {
+			if (timeSort) {
+				conditions.push(gt(email.emailId, emailId));
+			} else {
+				conditions.push(lt(email.emailId, emailId));
+			}
 		}
 
 		const list = await orm(c)
