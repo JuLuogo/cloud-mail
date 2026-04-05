@@ -118,7 +118,7 @@
           <el-input v-model="ruleDialog.form.forwardTo" :placeholder="$t('forwardToPlaceholder')"/>
         </el-form-item>
         <el-form-item :label="$t('priority')">
-          <el-input-number v-model="ruleDialog.form.priority" :min="0" :max="100"/>
+          <el-input v-model="ruleDialog.form.priority" type="number" :min="0" :max="100"/>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -396,10 +396,10 @@ function openAddRule() {
 function editRule(rule) {
   ruleDialog.isEdit = true
   ruleDialog.form = {
-    ruleId: rule.ruleId,
-    pattern: rule.pattern,
-    forwardTo: rule.forwardTo,
-    priority: rule.priority
+    ruleId: rule.ruleId || null,
+    pattern: rule.pattern || '',
+    forwardTo: rule.forwardTo || '',
+    priority: typeof rule.priority === 'number' ? rule.priority : 0
   }
   ruleDialog.show = true
 }
