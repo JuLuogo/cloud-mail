@@ -148,19 +148,35 @@ export async function email(message, env, ctx) {
 		}
 
 		// 用户级转发设置优先于全局设置
-		let effectiveForwardStatus = forwardStatus;
-		let effectiveForwardEmail = forwardEmail;
+		// userRow.forwardStatus: 0=继承全局, 1=开启, 2=关闭
+		let shouldForward = false;
+		let forwardToEmail = '';
 
-		// userRow 在前面已经获取了
-		if (userRow && userRow.forwardStatus !== 0) {
-			effectiveForwardStatus = userRow.forwardStatus;
-			effectiveForwardEmail = userRow.forwardEmail;
+		if (userRow && userRow.forwardStatus === 1) {
+			// 用户开启了转发，使用用户的转发邮箱
+			shouldForward = true;
+			forwardToEmail = userRow.forwardEmail;
+		} else if (userRow && userRow.forwardStatus === 2) {
+			// 用户关闭了转发
+			shouldForward = false;
+		} else if (userRow && userRow.forwardStatus === 0) {
+			// 用户继承全局设置
+			if (forwardStatus === settingConst.forwardStatus.OPEN && forwardEmail) {
+				shouldForward = true;
+				forwardToEmail = forwardEmail;
+			}
+		} else {
+			// 没有 account 或 userRow，使用全局设置
+			if (forwardStatus === settingConst.forwardStatus.OPEN && forwardEmail) {
+				shouldForward = true;
+				forwardToEmail = forwardEmail;
+			}
 		}
 
 		//转发到其他邮箱
-		if (effectiveForwardStatus === settingConst.forwardStatus.OPEN && effectiveForwardEmail) {
+		if (shouldForward && forwardToEmail) {
 
-			const emails = effectiveForwardEmail.split(',');
+			const emails = forwardToEmail.split(',');
 
 			await Promise.all(emails.map(async email => {
 
