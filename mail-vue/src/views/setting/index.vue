@@ -40,6 +40,37 @@
         </div>
       </div>
     </div>
+
+    <!-- 转发规则配置 -->
+    <div class="forward-rules-section" v-if="hasForwardDomain">
+      <div class="title">{{$t('forwardRules')}}</div>
+      <div class="item">
+        <div>{{$t('enable')}}</div>
+        <div>
+          <el-switch v-model="forwardEnabled" @change="toggleForward" />
+        </div>
+      </div>
+      <div v-if="forwardEnabled" class="forward-rules-list">
+        <div class="forward-rule-item" v-for="rule in forwardRules" :key="rule.ruleId">
+          <span class="pattern">{{ rule.pattern }} → {{ rule.forwardTo }}</span>
+          <span class="actions">
+            <el-switch
+              v-model="rule.status"
+              :active-value="1"
+              :inactive-value="0"
+              @change="toggleRule(rule)"
+            />
+            <el-button size="small" @click="editRule(rule)">{{ $t('edit') }}</el-button>
+            <el-button size="small" type="danger" @click="deleteRule(rule)">{{ $t('delete') }}</el-button>
+          </span>
+        </div>
+        <el-button type="primary" @click="openAddRule" style="margin-top: 10px">
+          <Icon icon="ion:add-outline" width="18" height="18"/>
+          {{ $t('add') }}
+        </el-button>
+      </div>
+    </div>
+
     <div class="del-email" v-perm="'my:delete'">
       <div class="title">{{$t('deleteUser')}}</div>
       <div style="color: var(--regular-text-color);">
@@ -75,6 +106,26 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 转发规则对话框 -->
+    <el-dialog v-model="ruleDialog.show" :title="ruleDialog.isEdit ? $t('editRule') : $t('addRule')">
+      <el-form :model="ruleDialog.form" label-width="100px">
+        <el-form-item :label="$t('pattern')">
+          <el-input v-model="ruleDialog.form.pattern" :placeholder="$t('patternPlaceholder')"/>
+          <div class="form-tip">{{ $t('patternTip') }}</div>
+        </el-form-item>
+        <el-form-item :label="$t('forwardTo')">
+          <el-input v-model="ruleDialog.form.forwardTo" :placeholder="$t('forwardToPlaceholder')"/>
+        </el-form-item>
+        <el-form-item :label="$t('priority')">
+          <el-input-number v-model="ruleDialog.form.priority" :min="0" :max="100"/>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="ruleDialog.show = false">{{$t('cancel')}}</el-button>
+        <el-button type="primary" @click="submitRule" :loading="ruleDialog.loading">{{ $t('save') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 <script setup>
@@ -86,10 +137,29 @@ import {accountSetName} from "@/request/account.js";
 import {useAccountStore} from "@/store/account.js";
 import {useI18n} from "vue-i18n";
 import {twoFactorSetup, twoFactorEnable, twoFactorDisable, twoFactorStatus} from "@/request/2fa.js";
+import {forwardRuleList, forwardRuleAdd, forwardRuleUpdate, forwardRuleDelete, forwardRuleToggle} from "@/request/forward-rule.js";
+import {ElMessage, ElMessageBox} from "element-plus";
+import {Icon} from "@iconify/vue";
 
 const { t } = useI18n()
 const accountStore = useAccountStore()
 const userStore = useUserStore();
+
+// 转发规则相关
+const hasForwardDomain = ref(false) // 是否有可用域名权限
+const forwardEnabled = ref(false) // 是否启用转发
+const forwardRules = ref([])
+const ruleDialog = reactive({
+  show: false,
+  isEdit: false,
+  loading: false,
+  form: {
+    ruleId: null,
+    pattern: '',
+    forwardTo: '',
+    priority: 0
+  }
+})
 const setPwdLoading = ref(false)
 const setNameShow = ref(false)
 const accountName = ref(null)
@@ -222,6 +292,7 @@ onMounted(async () => {
   } catch (e) {
     console.error('Failed to get 2FA status:', e)
   }
+  loadForwardRules()
 })
 
 function openTwoFactorSetup() {
@@ -297,6 +368,98 @@ async function submitTwoFactor() {
       twoFactorLoading.value = false
     }
   }
+}
+
+// 转发规则相关函数
+async function loadForwardRules() {
+  try {
+    const rules = await forwardRuleList()
+    forwardRules.value = rules
+    // 用户登录后就显示转发规则区域，权限验证在后端进行
+    hasForwardDomain.value = true
+  } catch (e) {
+    console.error('Failed to load forward rules:', e)
+  }
+}
+
+function openAddRule() {
+  ruleDialog.isEdit = false
+  ruleDialog.form = {
+    ruleId: null,
+    pattern: '',
+    forwardTo: '',
+    priority: 0
+  }
+  ruleDialog.show = true
+}
+
+function editRule(rule) {
+  ruleDialog.isEdit = true
+  ruleDialog.form = {
+    ruleId: rule.ruleId,
+    pattern: rule.pattern,
+    forwardTo: rule.forwardTo,
+    priority: rule.priority
+  }
+  ruleDialog.show = true
+}
+
+async function submitRule() {
+  if (!ruleDialog.form.pattern || !ruleDialog.form.forwardTo) {
+    ElMessage.warning(t('pleaseFillRequiredFields'))
+    return
+  }
+  if (!ruleDialog.form.pattern.includes('@') || !ruleDialog.form.pattern.includes('*')) {
+    ElMessage.warning(t('patternMustContainWildcard'))
+    return
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(ruleDialog.form.forwardTo)) {
+    ElMessage.warning(t('forwardToEmailInvalid'))
+    return
+  }
+  ruleDialog.loading = true
+  try {
+    if (ruleDialog.isEdit) {
+      await forwardRuleUpdate(ruleDialog.form)
+    } else {
+      await forwardRuleAdd(ruleDialog.form)
+    }
+    ruleDialog.show = false
+    ElMessage.success(t('saveSuccessMsg'))
+    loadForwardRules()
+  } catch (e) {
+    console.error('Failed to save forward rule:', e)
+  } finally {
+    ruleDialog.loading = false
+  }
+}
+
+async function deleteRule(rule) {
+  try {
+    await ElMessageBox.confirm(t('deleteConfirm'), t('warning'), { type: 'warning' })
+    await forwardRuleDelete(rule.ruleId)
+    ElMessage.success(t('delSuccessMsg'))
+    loadForwardRules()
+  } catch (e) {
+    if (e !== 'cancel') {
+      console.error('Failed to delete forward rule:', e)
+    }
+  }
+}
+
+async function toggleRule(rule) {
+  try {
+    await forwardRuleToggle({ ruleId: rule.ruleId, status: rule.status })
+  } catch (e) {
+    console.error('Failed to toggle forward rule:', e)
+    rule.status = rule.status ? 0 : 1
+  }
+}
+
+async function toggleForward(val) {
+  // 转发启用/禁用功能预留
+  console.log('Forward enabled:', val)
 }
 
 </script>
@@ -399,6 +562,40 @@ async function submitTwoFactor() {
     display: flex;
     flex-direction: column;
     gap: 20px;
+  }
+
+  .forward-rules-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--el-border-color);
+
+    .forward-rules-list {
+      margin-top: 15px;
+    }
+
+    .forward-rule-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--el-border-color);
+
+      .pattern {
+        font-size: 14px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+    }
+
+    .form-tip {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+    }
   }
 }
 </style>

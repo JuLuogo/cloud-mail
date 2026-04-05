@@ -32,6 +32,7 @@ const dbInit = {
 		await this.v2_11DB(c);
 		await this.v2_12DB(c);
 		await this.v2_13DB(c);
+		await this.v2_14DB(c);
 		await settingService.refresh(c);
 		return c.text('success');
 	},
@@ -110,6 +111,14 @@ const dbInit = {
 			`).run();
 		} catch (e) {
 			console.warn(`跳过权限数据：${e.message}`);
+		}
+	},
+
+	async v2_14DB(c) {
+		try {
+			await c.env.db.prepare(`ALTER TABLE user ADD COLUMN avail_domain TEXT NOT NULL DEFAULT '';`).run();
+		} catch (e) {
+			console.warn(`跳过字段添加：${e.message}`);
 		}
 	},
 

@@ -90,6 +90,7 @@
                   <el-dropdown-menu>
                     <el-dropdown-item @click="openSetPwd(props.row)" >{{ $t('chgPwd') }}</el-dropdown-item>
                     <el-dropdown-item @click="openSetType(props.row)" >{{ $t('perm') }}</el-dropdown-item>
+                    <el-dropdown-item @click="openSetAvailDomain(props.row)" >{{ $t('availableDomains') }}</el-dropdown-item>
                     <template v-if="props.row.type !== 0">
                       <el-dropdown-item v-if="props.row.isDel !== 1" @click="setStatus(props.row)">
                         {{ setStatusName(props.row) }}
@@ -149,6 +150,15 @@
           <el-option v-for="item in roleList" :label="item.name" :value="item.roleId" :key="item.roleId"/>
         </el-select>
         <el-button :disabled="userForm.type === 0" class="btn" :loading="settingLoading" type="primary" @click="setType"
+        >{{ $t('save') }}
+        </el-button>
+      </div>
+    </el-dialog>
+    <el-dialog class="dialog" v-model="setAvailDomainShow" :title="$t('availableDomains')" @closed="resetUserForm">
+      <div class="dialog-box">
+        <el-input v-model="userForm.availDomain" type="text" :placeholder="$t('availableDomainsPlaceholder')" autocomplete="off"/>
+        <div style="font-size: 12px; color: #999; margin-top: 5px;">{{ $t('availableDomainsTip') }}</div>
+        <el-button class="btn" :loading="settingLoading" type="primary" @click="setAvailDomain"
         >{{ $t('save') }}
         </el-button>
       </div>
@@ -321,6 +331,14 @@
               </div>
             </template>
           </el-dropdown-item>
+          <el-dropdown-item @click="openSetAvailDomain(rightClickUser)">
+            <template #default>
+              <div class="right-dropdown-item">
+                <Icon icon="ion:globe-outline" width="20" height="20" />
+                <span>{{ t('availableDomains') }}</span>
+              </div>
+            </template>
+          </el-dropdown-item>
           <el-dropdown-item v-if="rightClickUser.type !== 0">
             <template #default>
               <div class="right-dropdown-item" v-if="rightClickUser.isDel !== 1" @click="setStatus(rightClickUser)" >
@@ -376,7 +394,8 @@ import {
   userRestSendCount,
   userRestore,
   userDeleteAccount,
-  userAllAccount
+  userAllAccount,
+  userSetAvailDomain
 } from '@/request/user.js'
 import {roleSelectUse} from "@/request/role.js";
 import {Icon} from "@iconify/vue";
@@ -455,6 +474,7 @@ const userForm = reactive({
   password: null,
   type: -1,
   userId: 0,
+  availDomain: '',
 })
 
 const showAdd = ref(false)
@@ -462,6 +482,7 @@ const accountShow = ref(false)
 const addLoading = ref(false);
 const setTypeShow = ref(false)
 const setPwdShow = ref(false)
+const setAvailDomainShow = ref(false)
 const pagerCount = ref(10)
 const settingLoading = ref(false)
 const tableLoading = ref(true)
@@ -965,6 +986,29 @@ function openSetType(user) {
 function openSetPwd(user) {
   userForm.userId = user.userId
   setPwdShow.value = true
+}
+
+function openSetAvailDomain(user) {
+  chooseUser = user
+  userForm.userId = user.userId
+  userForm.availDomain = user.availDomain || ''
+  setAvailDomainShow.value = true
+}
+
+async function setAvailDomain() {
+  settingLoading.value = true
+  try {
+    await userSetAvailDomain({ userId: userForm.userId, availDomain: userForm.availDomain })
+    chooseUser.availDomain = userForm.availDomain
+    setAvailDomainShow.value = false
+    ElMessage({
+      message: t('saveSuccessMsg'),
+      type: "success",
+      plain: true
+    })
+  } finally {
+    settingLoading.value = false
+  }
 }
 
 function refresh() {

@@ -433,6 +433,28 @@ const userService = {
 			.where(eq(user.regKeyId, regKeyId))
 			.orderBy(desc(user.userId))
 			.all();
+	},
+
+	async setAvailDomain(c, params, operatorInfo) {
+		const { userId, availDomain } = params;
+		const userRow = await this.selectById(c, userId);
+
+		await orm(c)
+			.update(user)
+			.set({ availDomain })
+			.where(eq(user.userId, userId))
+			.run();
+
+		// 审计日志
+		await auditService.log(c, {
+			userId: operatorInfo.userId,
+			userEmail: operatorInfo.userEmail,
+			action: 'USER_SET_AVAIL_DOMAIN',
+			targetType: auditConst.targetType.USER,
+			targetId: String(userId),
+			targetDesc: userRow?.email,
+			detail: { availDomain, email: userRow?.email }
+		});
 	}
 };
 

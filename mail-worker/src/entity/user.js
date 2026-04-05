@@ -22,6 +22,7 @@ const user = sqliteTable('user', {
 	forwardEmail: text('forward_email').default('').notNull(),
 	totpSecret: text('totp_secret'),
 	totpEnabled: integer('totp_enabled').default(0).notNull(),
-	totpBindTime: text('totp_bind_time')
+	totpBindTime: text('totp_bind_time'),
+	availDomain: text('avail_domain').default('').notNull()
 });
 export default user

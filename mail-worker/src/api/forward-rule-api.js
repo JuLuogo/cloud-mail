@@ -5,13 +5,14 @@ import userContext from '../security/user-context';
 
 app.get('/forward-rule/list', async (c) => {
 	const userId = userContext.getUserId(c);
-	const list = await forwardRuleService.list(c, userId);
+	const isAdmin = c.env.admin === userContext.getUser(c)?.email;
+	const list = await forwardRuleService.list(c, isAdmin ? 0 : userId);
 	return c.json(result.ok(list));
 });
 
 app.post('/forward-rule/add', async (c) => {
 	const userId = userContext.getUserId(c);
-	const isAdmin = c.env.admin === userContext.getUser(c).email;
+	const isAdmin = c.env.admin === userContext.getUser(c)?.email;
 
 	const params = await c.req.json();
 

@@ -92,16 +92,6 @@ const routes = [
                     menu: true
                 }
             },
-            {
-                path: '/forward-rule',
-                name: 'forward-rule',
-                component: () => import('@/views/forward-rule/index.vue'),
-                meta: {
-                    title: 'forwardRules',
-                    name: 'forward-rule',
-                    menu: true
-                }
-            },
         ]
 
     },

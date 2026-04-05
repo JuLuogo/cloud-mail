@@ -49,6 +49,11 @@ app.put('/user/restore', async (c) => {
 	return c.json(result.ok());
 });
 
+app.put('/user/setAvailDomain', async (c) => {
+	await userService.setAvailDomain(c, await c.req.json(), getOperatorInfo(c));
+	return c.json(result.ok());
+});
+
 app.get('/user/allAccount', async (c) => {
 	const data = await accountService.allAccount(c, c.req.query());
 	return c.json(result.ok(data));

@@ -1,5 +1,6 @@
 import orm from '../entity/orm';
 import { forwardRule } from '../entity/forward-rule';
+import { user } from '../entity/user';
 import { and, eq, desc } from 'drizzle-orm';
 import { t } from '../i18n/i18n';
 import BizError from '../error/biz-error';
@@ -7,6 +8,22 @@ import emailUtils from '../utils/email-utils';
 import roleService from './role-service';
 
 const forwardRuleService = {
+
+	/**
+	 * 获取用户的可用域名（优先使用用户个人设置，其次使用角色设置）
+	 */
+	async getUserAvailDomain(c, userId) {
+		if (userId === 0) {
+			return ''; // 管理员有全部权限
+		}
+		const userRow = await orm(c).select({ availDomain: user.availDomain }).from(user).where(eq(user.userId, userId)).get();
+		// 如果用户没有设置个人可用域名（空字符串），使用角色设置
+		if (!userRow?.availDomain) {
+			const { availDomain } = await roleService.selectByUserId(c, userId);
+			return availDomain;
+		}
+		return userRow.availDomain;
+	},
 
 	/**
 	 * 列出用户的转发规则
@@ -48,7 +65,7 @@ const forwardRuleService = {
 
 		// 非管理员用户需要验证域名权限
 		if (userId !== 0) {
-			const { availDomain } = await roleService.selectByUserId(c, userId);
+			const availDomain = await this.getUserAvailDomain(c, userId);
 			if (!roleService.hasAvailDomainPerm(availDomain, pattern)) {
 				throw new BizError(t('noDomainPermAdd'));
 			}
@@ -76,7 +93,8 @@ const forwardRuleService = {
 			throw new BizError(t('filterRuleNotExist'));
 		}
 
-		if (rule.userId !== userId && userId !== 0) {
+		// 权限检查：规则所有者(rule.userId === userId) 或 全局规则(rule.userId === 0) 可以操作
+		if (rule.userId !== userId && rule.userId !== 0) {
 			throw new BizError(t('noPermission'));
 		}
 
@@ -88,9 +106,9 @@ const forwardRuleService = {
 			if (!patternDomain || patternDomain.includes('*')) {
 				throw new BizError(t('forwardPatternDomainInvalid'));
 			}
-			// 非管理员用户需要验证域名权限
+			// 非全局规则需要验证域名权限
 			if (rule.userId !== 0) {
-				const { availDomain } = await roleService.selectByUserId(c, rule.userId);
+				const availDomain = await this.getUserAvailDomain(c, rule.userId);
 				if (!roleService.hasAvailDomainPerm(availDomain, pattern)) {
 					throw new BizError(t('noDomainPermAdd'));
 				}
@@ -122,7 +140,8 @@ const forwardRuleService = {
 			throw new BizError(t('filterRuleNotExist'));
 		}
 
-		if (rule.userId !== userId && userId !== 0) {
+		// 权限检查：规则所有者 或 全局规则 可以删除
+		if (rule.userId !== userId && rule.userId !== 0) {
 			throw new BizError(t('noPermission'));
 		}
 
@@ -142,7 +161,8 @@ const forwardRuleService = {
 			throw new BizError(t('filterRuleNotExist'));
 		}
 
-		if (rule.userId !== userId && userId !== 0) {
+		// 权限检查：规则所有者 或 全局规则 可以操作
+		if (rule.userId !== userId && rule.userId !== 0) {
 			throw new BizError(t('noPermission'));
 		}
 
@@ -215,7 +235,7 @@ const forwardRuleService = {
 			}
 
 			// 用户规则需要验证域名权限
-			const { availDomain } = await roleService.selectByUserId(c, rule.userId);
+			const availDomain = await this.getUserAvailDomain(c, rule.userId);
 			if (roleService.hasAvailDomainPerm(availDomain, email)) {
 				return rule;
 			}
