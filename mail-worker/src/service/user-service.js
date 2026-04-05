@@ -373,6 +373,38 @@ const userService = {
 			.where(eq(user.regKeyId, regKeyId))
 			.orderBy(desc(user.userId))
 			.all();
+	},
+
+	async setForward(c, params) {
+		const { userId, forwardStatus, forwardEmail } = params;
+
+		if (forwardStatus === 1 && !forwardEmail) {
+			throw new BizError(t('forwardEmailRequired'));
+		}
+
+		if (forwardEmail) {
+			const emails = forwardEmail.split(',');
+			for (const email of emails) {
+				if (!emailUtils.isEmail(email.trim())) {
+					throw new BizError(t('invalidForwardEmail'));
+				}
+			}
+		}
+
+		await orm(c)
+			.update(user)
+			.set({ forwardStatus, forwardEmail })
+			.where(eq(user.userId, userId))
+			.run();
+	},
+
+	async getForward(c, params) {
+		const { userId } = params;
+		const userRow = await userService.selectById(c, userId);
+		return {
+			forwardStatus: userRow.forwardStatus,
+			forwardEmail: userRow.forwardEmail
+		};
 	}
 };
 

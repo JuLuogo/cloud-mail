@@ -147,15 +147,25 @@ export async function email(message, env, ctx) {
 			await telegramService.sendEmailToBot({ env }, emailRow)
 		}
 
-		//转发到其他邮箱
-		if (forwardStatus === settingConst.forwardStatus.OPEN && forwardEmail) {
+		// 用户级转发设置优先于全局设置
+		let effectiveForwardStatus = forwardStatus;
+		let effectiveForwardEmail = forwardEmail;
 
-			const emails = forwardEmail.split(',');
+		// userRow 在前面已经获取了
+		if (userRow && userRow.forwardStatus !== 0) {
+			effectiveForwardStatus = userRow.forwardStatus;
+			effectiveForwardEmail = userRow.forwardEmail;
+		}
+
+		//转发到其他邮箱
+		if (effectiveForwardStatus === settingConst.forwardStatus.OPEN && effectiveForwardEmail) {
+
+			const emails = effectiveForwardEmail.split(',');
 
 			await Promise.all(emails.map(async email => {
 
 				try {
-					await message.forward(email);
+					await message.forward(email.trim());
 				} catch (e) {
 					console.error(`转发邮箱 ${email} 失败：`, e);
 				}
