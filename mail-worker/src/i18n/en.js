@@ -103,7 +103,19 @@ const en = {
 		"系统设置": "System Settings",
 		"设置查看": "View Settings",
 		"设置修改": "Change Settings",
-		"发件重置": "Reset Send Count"
+		"发件重置": "Reset Send Count",
+		"联系人管理": "Contacts",
+		"联系人查看": "View Contacts",
+		"联系人添加": "Add Contacts",
+		"联系人修改": "Edit Contacts",
+		"联系人删除": "Delete Contacts",
+		"过滤规则": "Filter Rules",
+		"规则查看": "View Rules",
+		"规则添加": "Add Rules",
+		"规则修改": "Edit Rules",
+		"规则删除": "Delete Rules",
+		"审计日志": "Audit Logs",
+		"日志查看": "View Logs"
 	}
 };
 

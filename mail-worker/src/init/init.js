@@ -180,6 +180,26 @@ const dbInit = {
 		} catch (e) {
 			console.warn(`跳过表创建：${e.message}`);
 		}
+
+		// 添加新权限
+		try {
+			await c.env.db.prepare(`
+		        INSERT INTO perm (perm_id, name, perm_key, pid, type, sort) VALUES
+		        (37, '联系人管理', NULL, 0, 1, 6.1),
+		        (38, '联系人查看', 'contact:query', 37, 2, 0),
+		        (39, '联系人添加', 'contact:add', 37, 2, 1),
+		        (40, '联系人修改', 'contact:update', 37, 2, 2),
+		        (41, '联系人删除', 'contact:delete', 37, 2, 3),
+		        (42, '过滤规则', NULL, 0, 1, 6.2),
+		        (43, '规则查看', 'filter:query', 42, 2, 0),
+		        (44, '规则添加', 'filter:add', 42, 2, 1),
+		        (45, '规则修改', 'filter:update', 42, 2, 2),
+		        (46, '规则删除', 'filter:delete', 42, 2, 3),
+		        (47, '审计日志', NULL, 0, 1, 6.3),
+		        (48, '日志查看', 'audit:query', 47, 2, 0)`).run();
+		} catch (e) {
+			console.warn(`跳过权限数据：${e.message}`);
+		}
 	},
 
 	async v2_9DB(c) {
