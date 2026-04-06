@@ -242,44 +242,68 @@ const forwardRuleService = {
 	 * @returns {Object|null} 匹配的规则
 	 */
 	async findMatchingRule(c, email) {
+		const debugInfo = [];
+		const log = (msg) => {
+			const line = `[findMatchingRule] ${msg}`;
+			debugInfo.push(line);
+			console.log(line);
+		};
+
 		const rules = await this.getEnabledRules(c);
-		console.log(`[findMatchingRule] 查找邮箱 ${email} 的匹配规则，共 ${rules.length} 条规则`);
+		log(`查找邮箱 ${email} 的匹配规则，共 ${rules.length} 条规则`);
 
 		for (const rule of rules) {
 			const matchResult = this.matchWildcardEmail(email, rule.pattern);
-			console.log(`[findMatchingRule] 规则 ${rule.pattern} vs ${email} = ${matchResult}`);
+			log(`规则 ${rule.pattern} vs ${email} = ${matchResult}`);
 			if (!matchResult) {
 				continue;
 			}
 
 			// 全局规则(userId=0)直接匹配
 			if (rule.userId === 0) {
-				console.log(`[findMatchingRule] 全局规则匹配，返回`);
+				log(`全局规则匹配，userId=0，直接返回`);
+				await this.saveDebugLog(c, email, debugInfo);
 				return rule;
 			}
 
 			// 用户规则需要验证域名权限
 			const availDomain = await this.getUserAvailDomain(c, rule.userId);
-			console.log(`[findMatchingRule] 用户规则，availDomain=${availDomain}`);
+			log(`用户规则 userId=${rule.userId}，availDomain=${availDomain}`);
 			if (!roleService.hasAvailDomainPerm(availDomain, email)) {
-				console.log(`[findMatchingRule] 用户规则域名权限不匹配，跳过`);
+				log(`用户规则域名权限不匹配，跳过`);
 				continue;
 			}
 
 			// 检查用户的 forwardStatus 是否开启
 			const ruleOwner = await orm(c).select({ forwardStatus: user.forwardStatus }).from(user).where(eq(user.userId, rule.userId)).get();
-			console.log(`[findMatchingRule] 用户 forwardStatus=${ruleOwner?.forwardStatus}`);
+			log(`用户 forwardStatus=${ruleOwner?.forwardStatus}`);
 			if (!ruleOwner || ruleOwner.forwardStatus !== 1) {
-				console.log(`[findMatchingRule] 用户转发未开启，跳过`);
+				log(`用户转发未开启(fowardStatus!=1)，跳过`);
 				continue;
 			}
 
-			console.log(`[findMatchingRule] 用户规则匹配，返回`);
+			log(`用户规则匹配，返回`);
+			await this.saveDebugLog(c, email, debugInfo);
 			return rule;
 		}
 
-		console.log(`[findMatchingRule] 未找到匹配规则`);
+		log(`未找到匹配规则`);
+		await this.saveDebugLog(c, email, debugInfo);
 		return null;
+	},
+
+	/**
+	 * 保存调试日志到 KV
+	 */
+	async saveDebugLog(c, email, debugInfo) {
+		try {
+			const key = `forward_debug_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+			const log = debugInfo.join('\n');
+			await c.env.kv.put(key, log, { expirationTtl: 300 }); // 5分钟后过期
+			console.log(`[findMatchingRule] 调试日志已写入 KV: ${key}`);
+		} catch (e) {
+			console.error(`[findMatchingRule] 保存调试日志失败: ${e}`);
+		}
 	}
 };
 
