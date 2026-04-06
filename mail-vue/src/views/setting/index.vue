@@ -107,36 +107,6 @@
       </template>
     </el-dialog>
 
-    <!-- 转发规则对话框 -->
-    <el-dialog
-      v-model="ruleDialogVisible"
-      :title="isEditRule ? t('editRule') : t('addRule')"
-      width="500px"
-    >
-      <div class="rule-form">
-        <div class="form-item">
-          <div class="form-label">{{ t('pattern') }}</div>
-          <el-input
-            v-model="rulePattern"
-            :placeholder="t('patternPlaceholder')"
-          />
-          <div class="form-tip">{{ t('patternTip') }}</div>
-        </div>
-        <div class="form-item">
-          <div class="form-label">{{ t('forwardTo') }}</div>
-          <el-input
-            v-model="ruleForwardTo"
-            :placeholder="t('forwardToPlaceholder')"
-          />
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="ruleDialogVisible = false">{{ t('cancel') }}</el-button>
-        <el-button type="primary" :loading="ruleLoading" @click="handleSaveRule">
-          {{ t('save') }}
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 <script setup>
@@ -401,6 +371,12 @@ function openAddRule() {
   ruleDialogVisible.value = true
 }
 
+function handleDialogClose() {
+  rulePattern.value = ''
+  ruleForwardTo.value = ''
+  currentRuleId.value = null
+}
+
 function editRule(rule) {
   isEditRule.value = true
   currentRuleId.value = rule.ruleId || null
@@ -617,13 +593,31 @@ async function toggleForward(val) {
   }
 
   .rule-form {
+    padding: 10px 0;
     .form-item {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
       .form-label {
+        display: block;
         font-size: 14px;
         font-weight: 500;
         margin-bottom: 8px;
         color: var(--el-text-color-regular);
+      }
+      .form-tip {
+        font-size: 12px;
+        color: #999;
+        margin-top: 4px;
+      }
+    }
+    .el-input__inner {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--el-border-color);
+      border-radius: 4px;
+      font-size: 14px;
+      &:focus {
+        outline: none;
+        border-color: var(--el-color-primary);
       }
     }
   }
