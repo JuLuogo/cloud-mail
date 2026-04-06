@@ -90,7 +90,7 @@ const sesService = {
         const requestBody = {
             FromEmailAddress: from,
             Destination: {
-                ToAddresses: [to]
+                ToAddresses: to
             },
             Content: {
                 Simple: {
