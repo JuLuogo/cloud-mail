@@ -2,6 +2,12 @@ import { parseHTML } from 'linkedom';
 
 const emailUtils = {
 
+	isEmail(email) {
+		if (typeof email !== 'string') return false;
+		const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		return regex.test(email);
+	},
+
 	getDomain(email) {
 		if (typeof email !== 'string') return '';
 		const parts = email.split('@');
