@@ -10,7 +10,8 @@
       "Bash(npx wrangler:*)",
       "Bash(timeout 8 pnpm dev)",
       "Bash(pnpm build:*)",
-      "WebFetch(domain:minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com)"
+      "WebFetch(domain:minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com)",
+      "Bash(grep -o '.\\\\{0,200\\\\}patternTip.\\\\{0,200\\\\}' \"C:\\\\Users\\\\juluo\\\\Desktop\\\\index-CAYI_n8x.js\")"
     ]
   }
 }

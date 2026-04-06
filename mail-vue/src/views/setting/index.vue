@@ -108,19 +108,33 @@
     </el-dialog>
 
     <!-- 转发规则对话框 -->
-    <el-dialog v-model="ruleDialogVisible" :title="ruleDialogIsEdit ? $t('editRule') : $t('addRule')">
-      <el-form :model="ruleFormData" label-width="100px">
-        <el-form-item :label="$t('pattern')">
-          <el-input v-model="ruleFormData.pattern" :placeholder="$t('patternPlaceholder')"/>
-          <div class="form-tip">{{ $t('patternTip') }}</div>
-        </el-form-item>
-        <el-form-item :label="$t('forwardTo')">
-          <el-input v-model="ruleFormData.forwardTo" :placeholder="$t('forwardToPlaceholder')"/>
-        </el-form-item>
-      </el-form>
+    <el-dialog
+      v-model="ruleDialogVisible"
+      :title="isEditRule ? t('editRule') : t('addRule')"
+      width="500px"
+    >
+      <div class="rule-form">
+        <div class="form-item">
+          <div class="form-label">{{ t('pattern') }}</div>
+          <el-input
+            v-model="rulePattern"
+            :placeholder="t('patternPlaceholder')"
+          />
+          <div class="form-tip">{{ t('patternTip') }}</div>
+        </div>
+        <div class="form-item">
+          <div class="form-label">{{ t('forwardTo') }}</div>
+          <el-input
+            v-model="ruleForwardTo"
+            :placeholder="t('forwardToPlaceholder')"
+          />
+        </div>
+      </div>
       <template #footer>
-        <el-button @click="ruleDialogVisible = false">{{$t('cancel')}}</el-button>
-        <el-button type="primary" @click="submitRule" :loading="ruleDialogLoading">{{ $t('save') }}</el-button>
+        <el-button @click="ruleDialogVisible = false">{{ t('cancel') }}</el-button>
+        <el-button type="primary" :loading="ruleLoading" @click="handleSaveRule">
+          {{ t('save') }}
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -144,21 +158,19 @@ const accountStore = useAccountStore()
 const userStore = useUserStore();
 
 // 转发规则相关
-const hasForwardDomain = ref(false) // 是否有可用域名权限
+const hasForwardDomain = ref(false)
 const forwardEnabled = computed({
-  get: () => userStore.user.forwardStatus === 0, // 0=OPEN, 1=CLOSE
+  get: () => userStore.user.forwardStatus === 0,
   set: (val) => val
-}) // 是否启用转发
-const forwardRules = ref([])
-// 对话框状态 - 使用独立的 ref 避免响应式问题
-const ruleDialogVisible = ref(false)
-const ruleDialogIsEdit = ref(false)
-const ruleDialogLoading = ref(false)
-const ruleFormData = reactive({
-  ruleId: null,
-  pattern: '',
-  forwardTo: ''
 })
+const forwardRules = ref([])
+// 对话框状态 - 使用独立的 ref
+const ruleDialogVisible = ref(false)
+const isEditRule = ref(false)
+const ruleLoading = ref(false)
+const rulePattern = ref('')
+const ruleForwardTo = ref('')
+const currentRuleId = ref(null)
 const setPwdLoading = ref(false)
 const setNameShow = ref(false)
 const accountName = ref(null)
@@ -382,41 +394,46 @@ async function loadForwardRules() {
 }
 
 function openAddRule() {
-  ruleDialogIsEdit.value = false
-  ruleFormData.ruleId = null
-  ruleFormData.pattern = ''
-  ruleFormData.forwardTo = ''
+  isEditRule.value = false
+  currentRuleId.value = null
+  rulePattern.value = ''
+  ruleForwardTo.value = ''
   ruleDialogVisible.value = true
 }
 
 function editRule(rule) {
-  ruleDialogIsEdit.value = true
-  ruleFormData.ruleId = rule.ruleId || null
-  ruleFormData.pattern = rule.pattern || ''
-  ruleFormData.forwardTo = rule.forwardTo || ''
+  isEditRule.value = true
+  currentRuleId.value = rule.ruleId || null
+  rulePattern.value = rule.pattern || ''
+  ruleForwardTo.value = rule.forwardTo || ''
   ruleDialogVisible.value = true
 }
 
-async function submitRule() {
-  if (!ruleFormData.pattern || !ruleFormData.forwardTo) {
+async function handleSaveRule() {
+  if (!rulePattern.value || !ruleForwardTo.value) {
     ElMessage.warning(t('pleaseFillRequiredFields'))
     return
   }
-  if (!ruleFormData.pattern.includes('@') || !ruleFormData.pattern.includes('*')) {
+  if (!rulePattern.value.includes('@') || !rulePattern.value.includes('*')) {
     ElMessage.warning(t('patternMustContainWildcard'))
     return
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(ruleFormData.forwardTo)) {
+  if (!emailRegex.test(ruleForwardTo.value)) {
     ElMessage.warning(t('forwardToEmailInvalid'))
     return
   }
-  ruleDialogLoading.value = true
+  ruleLoading.value = true
   try {
-    if (ruleDialogIsEdit.value) {
-      await forwardRuleUpdate(ruleFormData)
+    const data = {
+      ruleId: currentRuleId.value,
+      pattern: rulePattern.value,
+      forwardTo: ruleForwardTo.value
+    }
+    if (isEditRule.value) {
+      await forwardRuleUpdate(data)
     } else {
-      await forwardRuleAdd(ruleFormData)
+      await forwardRuleAdd(data)
     }
     ruleDialogVisible.value = false
     ElMessage.success(t('saveSuccessMsg'))
@@ -424,7 +441,7 @@ async function submitRule() {
   } catch (e) {
     console.error('Failed to save forward rule:', e)
   } finally {
-    ruleDialogLoading.value = false
+    ruleLoading.value = false
   }
 }
 
@@ -596,6 +613,18 @@ async function toggleForward(val) {
       font-size: 12px;
       color: #999;
       margin-top: 4px;
+    }
+  }
+
+  .rule-form {
+    .form-item {
+      margin-bottom: 18px;
+      .form-label {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: var(--el-text-color-regular);
+      }
     }
   }
 }
