@@ -203,13 +203,16 @@ const forwardRuleService = {
 	 * 获取所有启用的规则（全局+用户）
 	 */
 	async getEnabledRules(c) {
-		return orm(c).select().from(forwardRule)
+		const result = await orm(c).select().from(forwardRule)
 			.where(and(
 				eq(forwardRule.isDel, 0),
 				eq(forwardRule.status, 1)
 			))
 			.orderBy(desc(forwardRule.priority))
 			.all();
+		console.log(`[getEnabledRules] 查询结果: ${result.length} 条规则`);
+		console.log(`[getEnabledRules] 原始数据:`, JSON.stringify(result));
+		return result;
 	},
 
 	/**
