@@ -107,7 +107,7 @@
     </el-dialog>
 
     <!-- 添加/编辑规则对话框 -->
-    <el-dialog v-model="ruleDialogVisible" :title="ruleDialogTitle" width="450">
+    <el-dialog v-model="ruleDialogVisible" title="Forward Rule" width="450">
       <div style="margin-bottom:15px;">
         <div style="margin-bottom:5px;">{{ $t('pattern') }}</div>
         <el-input v-model="rulePattern" :placeholder="$t('patternPlaceholder')" />
@@ -156,7 +156,6 @@ const ruleLoading = ref(false)
 const rulePattern = ref('')
 const ruleForwardTo = ref('')
 const currentRuleId = ref(null)
-const ruleDialogTitle = computed(() => isEditRule.value ? t('editRule') : t('addRule'))
 const setPwdLoading = ref(false)
 const setNameShow = ref(false)
 const accountName = ref(null)
