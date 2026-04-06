@@ -118,5 +118,56 @@ const routers = {
             name: 'analysis',
             menu: true
         }
+    }],
+    'star:query': [{
+        path: '/starred',
+        name: 'star',
+        component: () => import('@/views/star/index.vue'),
+        meta: {
+            title: 'starred',
+            name: 'star',
+            menu: true
+        }
+    }],
+    'email:archive:query': [{
+        path: '/archive',
+        name: 'archive',
+        component: () => import('@/views/archive/index.vue'),
+        meta: {
+            title: 'archive',
+            name: 'archive',
+            menu: true
+        }
+    }],
+    'contact:query': [{
+        path: '/contact',
+        name: 'contact',
+        component: () => import('@/views/contact/index.vue'),
+        meta: {
+            title: 'contacts',
+            name: 'contact',
+            menu: true
+        }
+    }],
+    'filter:query': [{
+        path: '/filter',
+        name: 'filter',
+        component: () => import('@/views/filter/index.vue'),
+        meta: {
+            title: 'filterRules',
+            name: 'filter',
+            menu: true
+        }
+    }],
+    'audit:query': [{
+        path: '/audit',
+        name: 'audit',
+        component: () => import('@/views/audit/index.vue'),
+        meta: {
+            title: 'auditLog',
+            name: 'audit',
+            menu: true,
+            adminOnly: true
+        }
     }]
 }

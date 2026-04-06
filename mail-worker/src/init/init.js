@@ -33,6 +33,7 @@ const dbInit = {
 		await this.v2_12DB(c);
 		await this.v2_13DB(c);
 		await this.v2_14DB(c);
+		await this.v2_15DB(c);
 		await settingService.refresh(c);
 		return c.text('success');
 	},
@@ -119,6 +120,41 @@ const dbInit = {
 			await c.env.db.prepare(`ALTER TABLE user ADD COLUMN avail_domain TEXT NOT NULL DEFAULT '';`).run();
 		} catch (e) {
 			console.warn(`跳过字段添加：${e.message}`);
+		}
+
+		// 添加邮件归档权限
+		try {
+			await c.env.db.prepare(`
+				INSERT INTO perm (perm_id, name, perm_key, pid, type, sort) VALUES
+				(54, '邮件归档', NULL, 0, 1, 1.1),
+				(55, '归档查看', 'email:archive:query', 54, 2, 0),
+				(56, '邮件归档', 'email:archive', 54, 2, 1),
+				(57, '取消归档', 'email:unarchive', 54, 2, 2)
+			`).run();
+		} catch (e) {
+			console.warn(`跳过权限数据：${e.message}`);
+		}
+	},
+
+	async v2_15DB(c) {
+		// 添加更多权限点
+		try {
+			await c.env.db.prepare(`
+				INSERT INTO perm (perm_id, name, perm_key, pid, type, sort) VALUES
+				(58, '邮件查看', 'email:query', 1, 2, 2),
+				(59, '账号名称', 'account:setName', 21, 2, 3),
+				(60, '全接设置', 'account:setAllReceive', 21, 2, 4),
+				(61, '账号置顶', 'account:setAsTop', 21, 2, 5),
+				(62, '星标邮件', NULL, 0, 1, 1.2),
+				(63, '星标查看', 'star:query', 62, 2, 0),
+				(64, '星标添加', 'star:add', 62, 2, 1),
+				(65, '星标删除', 'star:delete', 62, 2, 2),
+				(66, '用户恢复', 'user:restore', 6, 2, 8),
+				(67, '域名设置', 'user:set-avail-domain', 6, 2, 9),
+				(68, '转发设置', 'user:set-forward-status', 6, 2, 10)
+			`).run();
+		} catch (e) {
+			console.warn(`跳过权限数据：${e.message}`);
 		}
 	},
 
