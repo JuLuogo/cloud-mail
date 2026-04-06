@@ -86,24 +86,38 @@ const sesService = {
         const endpoint = `https://email.${region}.amazonaws.com`;
         const path = '/v2/email/outbound-emails';
 
-        // 构建请求参数 - 使用 form-urlencoded 格式
-        const requestBody = new URLSearchParams();
-        requestBody.append('FromEmailAddress', from);
-        requestBody.append('Destination.ToAddresses.member.1', to);
-        requestBody.append('Content.Simple.Subject.Data', subject);
-        requestBody.append('Content.Simple.Subject.Charset', 'UTF-8');
+        // 构建请求参数 - 使用 JSON 格式
+        const requestBody = {
+            FromEmailAddress: from,
+            Destination: {
+                ToAddresses: [to]
+            },
+            Content: {
+                Simple: {
+                    Subject: {
+                        Data: subject,
+                        Charset: 'UTF-8'
+                    },
+                    Body: {}
+                }
+            }
+        };
 
         if (text) {
-            requestBody.append('Content.Simple.Body.Text.Data', text);
-            requestBody.append('Content.Simple.Body.Text.Charset', 'UTF-8');
+            requestBody.Content.Simple.Body.Text = {
+                Data: text,
+                Charset: 'UTF-8'
+            };
         }
 
         if (html) {
-            requestBody.append('Content.Simple.Body.Html.Data', html);
-            requestBody.append('Content.Simple.Body.Html.Charset', 'UTF-8');
+            requestBody.Content.Simple.Body.Html = {
+                Data: html,
+                Charset: 'UTF-8'
+            };
         }
 
-        const bodyString = requestBody.toString();
+        const bodyString = JSON.stringify(requestBody);
 
         // AWS Signature V4 签名 - 必须在发送请求时生成时间戳
         function getAmzDate(date = new Date()) {
@@ -125,7 +139,7 @@ const sesService = {
         // Header 必须按字母顺序排列
         const headers = {
             'content-length': bodyString.length.toString(),
-            'content-type': 'application/x-www-form-urlencoded',
+            'content-type': 'application/json',
             'host': `email.${region}.amazonaws.com`,
             'x-amz-content-sha256': await awsSignatureV4.hashSHA256(bodyString),
             'x-amz-date': amzDate
