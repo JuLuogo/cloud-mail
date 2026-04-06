@@ -41,11 +41,11 @@
       </div>
     </div>
 
-    <!-- 转发规则配置 - 已暂时禁用
-    <div class="forward-rules-section" v-if="hasForwardDomain">
-      <div class="title">{{$t('forwardRules')}}</div>
+    <!-- 转发规则配置 -->
+    <div class="forward-rules-section">
+      <div class="title">{{ $t('forwardRules') || 'Forward Rules' }}</div>
       <div class="item">
-        <div>{{$t('enable')}}</div>
+        <div>{{ $t('enable') || 'Enable' }}</div>
         <div>
           <el-switch v-model="forwardEnabled" @change="toggleForward" />
         </div>
@@ -60,17 +60,15 @@
               :inactive-value="0"
               @change="toggleRule(rule)"
             />
-            <el-button size="small" @click="editRule(rule)">{{ $t('edit') }}</el-button>
-            <el-button size="small" type="danger" @click="deleteRule(rule)">{{ $t('delete') }}</el-button>
+            <el-button size="small" @click="editRule(rule)">{{ $t('edit') || 'Edit' }}</el-button>
+            <el-button size="small" type="danger" @click="deleteRule(rule)">{{ $t('delete') || 'Delete' }}</el-button>
           </span>
         </div>
         <el-button type="primary" @click="openAddRule" style="margin-top: 10px">
-          <Icon icon="ion:add-outline" width="18" height="18"/>
-          {{ $t('add') }}
+          {{ $t('add') || 'Add' }}
         </el-button>
       </div>
     </div>
-    -->
 
     <div class="del-email" v-perm="'my:delete'">
       <div class="title">{{$t('deleteUser')}}</div>
@@ -113,24 +111,24 @@
       <div v-if="ruleDialogVisible" class="rule-dialog-overlay" @click.self="ruleDialogVisible = false">
         <div class="rule-dialog">
           <div class="rule-dialog-header">
-            <span class="rule-dialog-title">{{ isEditRule ? t('editRule') : t('addRule') }}</span>
+            <span class="rule-dialog-title">{{ isEditRule ? 'Edit Rule' : 'Add Rule' }}</span>
             <button class="rule-dialog-close" @click="ruleDialogVisible = false">&times;</button>
           </div>
           <div class="rule-dialog-body">
             <div class="rule-form-group">
-              <label>{{ t('pattern') }}</label>
-              <input type="text" v-model="rulePattern" :placeholder="t('patternPlaceholder')" />
-              <p class="rule-form-tip">{{ t('patternTip') }}</p>
+              <label>Pattern</label>
+              <input type="text" v-model="rulePattern" placeholder="e.g. *-99@99.com" />
+              <p class="rule-form-tip">* matches any characters</p>
             </div>
             <div class="rule-form-group">
-              <label>{{ t('forwardTo') }}</label>
-              <input type="text" v-model="ruleForwardTo" :placeholder="t('forwardToPlaceholder')" />
+              <label>Forward To</label>
+              <input type="text" v-model="ruleForwardTo" placeholder="e.g. a@juluo.work" />
             </div>
           </div>
           <div class="rule-dialog-footer">
-            <button class="btn-cancel" @click="ruleDialogVisible = false">{{ t('cancel') }}</button>
+            <button class="btn-cancel" @click="ruleDialogVisible = false">Cancel</button>
             <button class="btn-primary" @click="handleSaveRule" :disabled="ruleLoading">
-              {{ ruleLoading ? '...' : t('save') }}
+              {{ ruleLoading ? '...' : 'Save' }}
             </button>
           </div>
         </div>
@@ -158,7 +156,7 @@ const accountStore = useAccountStore()
 const userStore = useUserStore();
 
 // 转发规则相关
-const hasForwardDomain = ref(false)
+const hasForwardDomain = ref(true) // 始终显示
 const forwardEnabled = computed({
   get: () => userStore.user.forwardStatus === 0,
   set: (val) => val
