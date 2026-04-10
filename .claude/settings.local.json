@@ -18,7 +18,8 @@
       "Bash(node -e \"const zh = require\\('./src/i18n/zh.js'\\); console.log\\('patternMustContainWildcard:', zh.patternMustContainWildcard\\)\")",
       "Bash(node -e \"const zh = require\\('./src/i18n/zh.js'\\); console.log\\(Object.keys\\(zh\\).slice\\(-10\\)\\)\")",
       "Bash(node --experimental-vm-modules -e \"import zh from './src/i18n/zh.js'; console.log\\(Object.keys\\(zh\\).slice\\(-10\\)\\)\")",
-      "Bash(node --input-type=module -e ':*)"
+      "Bash(node --input-type=module -e ':*)",
+      "mcp__MiniMax__web_search"
     ]
   }
 }
