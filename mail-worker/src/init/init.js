@@ -34,6 +34,7 @@ const dbInit = {
 		await this.v2_13DB(c);
 		await this.v2_14DB(c);
 		await this.v2_15DB(c);
+		await this.v2_16DB(c);
 		await settingService.refresh(c);
 		return c.text('success');
 	},
@@ -155,6 +156,25 @@ const dbInit = {
 			`).run();
 		} catch (e) {
 			console.warn(`跳过权限数据：${e.message}`);
+		}
+	},
+
+	async v2_16DB(c) {
+		// 添加本地 SES API 和队列配置字段
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN local_ses_api_url TEXT NOT NULL DEFAULT '';`).run();
+		} catch (e) {
+			console.warn(`跳过字段：${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN local_ses_api_key TEXT NOT NULL DEFAULT '';`).run();
+		} catch (e) {
+			console.warn(`跳过字段：${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN queue_enabled INTEGER NOT NULL DEFAULT 1;`).run();
+		} catch (e) {
+			console.warn(`跳过字段：${e.message}`);
 		}
 	},
 
