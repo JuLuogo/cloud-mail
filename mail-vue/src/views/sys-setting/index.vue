@@ -205,6 +205,18 @@
                 </div>
               </div>
               <div class="setting-item">
+                <div>
+                  <span>{{ $t('queueEnabled') }}</span>
+                  <el-tooltip effect="dark" :content="$t('queueEnabledDesc')">
+                    <Icon class="warning" icon="fe:warning" width="18" height="18"/>
+                  </el-tooltip>
+                </div>
+                <div>
+                  <el-switch @change="change" :before-change="beforeChange" :active-value="1" :inactive-value="0"
+                             v-model="setting.queueEnabled"/>
+                </div>
+              </div>
+              <div class="setting-item">
                 <div><span>{{ $t('sendMethodConfig') }}</span></div>
                 <div>
                   <el-button class="opt-button" size="small" type="primary" @click="openSendMethodConfig">
@@ -767,11 +779,20 @@
         </div>
         <el-button type="primary" style="width: 100%;" :loading="settingLoading" @click="saveEmailPrefix">{{ $t('save') }}</el-button>
       </el-dialog>
-      <el-dialog v-model="sesFormShow" :title="$t('sesConfig')" width="340" @closed="cleanSesForm">
+      <el-dialog v-model="sesFormShow" :title="$t('sesConfig')" width="400" @closed="cleanSesForm">
         <form>
-          <el-input class="dialog-input" type="text" placeholder="SES Access Key" v-model="sesForm.sesAccessKey"/>
-          <el-input class="dialog-input" type="text" placeholder="SES Secret Key" v-model="sesForm.sesSecretKey"/>
-          <el-input class="dialog-input" type="text" placeholder="SES Region (e.g. us-east-1)" v-model="sesForm.sesRegion"/>
+          <div class="ses-form-section">
+            <div class="ses-form-title">{{ $t('sesDirectConfig') }}</div>
+            <el-input class="dialog-input" type="text" placeholder="SES Access Key" v-model="sesForm.sesAccessKey"/>
+            <el-input class="dialog-input" type="text" placeholder="SES Secret Key" v-model="sesForm.sesSecretKey"/>
+            <el-input class="dialog-input" type="text" placeholder="SES Region (e.g. ap-northeast-1)" v-model="sesForm.sesRegion"/>
+          </div>
+          <el-divider/>
+          <div class="ses-form-section">
+            <div class="ses-form-title">{{ $t('localSesApiConfig') }}</div>
+            <el-input class="dialog-input" type="text" placeholder="Local SES API URL (e.g. https://xxx.trycloudflare.com)" v-model="sesForm.localSesApiUrl"/>
+            <el-input class="dialog-input" type="text" placeholder="Local SES API Key" v-model="sesForm.localSesApiKey"/>
+          </div>
           <el-button type="primary" :loading="settingLoading" @click="saveSesConfig">{{ $t('save') }}</el-button>
         </form>
       </el-dialog>
@@ -863,6 +884,8 @@ const sesForm = reactive({
   sesAccessKey: '',
   sesSecretKey: '',
   sesRegion: '',
+  localSesApiUrl: '',
+  localSesApiKey: '',
 })
 
 const noticeForm = reactive({
@@ -1383,6 +1406,8 @@ function cleanSesForm() {
   sesForm.sesAccessKey = ''
   sesForm.sesSecretKey = ''
   sesForm.sesRegion = ''
+  sesForm.localSesApiUrl = ''
+  sesForm.localSesApiKey = ''
 }
 
 function openSesForm() {
@@ -1390,32 +1415,19 @@ function openSesForm() {
   sesForm.sesAccessKey = setting.value.sesAccessKey || ''
   sesForm.sesSecretKey = setting.value.sesSecretKey || ''
   sesForm.sesRegion = setting.value.sesRegion || ''
+  sesForm.localSesApiUrl = setting.value.localSesApiUrl || ''
+  sesForm.localSesApiKey = setting.value.localSesApiKey || ''
   sesFormShow.value = true
 }
 
 function saveSesConfig() {
-  // 表单验证
-  if (!sesForm.sesAccessKey) {
-    ElMessage({
-      message: t('emptySesAccessKey'),
-      type: 'error',
-      plain: true
-    })
-    return
-  }
+  // 表单验证：至少需要一种配置方式
+  const hasDirectSes = sesForm.sesAccessKey && sesForm.sesSecretKey && sesForm.sesRegion
+  const hasLocalApi = sesForm.localSesApiUrl
 
-  if (!sesForm.sesSecretKey) {
+  if (!hasDirectSes && !hasLocalApi) {
     ElMessage({
-      message: t('emptySesSecretKey'),
-      type: 'error',
-      plain: true
-    })
-    return
-  }
-
-  if (!sesForm.sesRegion) {
-    ElMessage({
-      message: t('emptySesRegion'),
+      message: t('emptySesConfig'),
       type: 'error',
       plain: true
     })
@@ -1425,7 +1437,9 @@ function saveSesConfig() {
   const settingForm = {
     sesAccessKey: sesForm.sesAccessKey,
     sesSecretKey: sesForm.sesSecretKey,
-    sesRegion: sesForm.sesRegion
+    sesRegion: sesForm.sesRegion,
+    localSesApiUrl: sesForm.localSesApiUrl,
+    localSesApiKey: sesForm.localSesApiKey,
   }
 
   editSetting(settingForm)

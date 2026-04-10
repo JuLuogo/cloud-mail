@@ -22,6 +22,7 @@ import account from "../entity/account";
 import { att } from '../entity/att';
 import telegramService from './telegram-service';
 import sesService from './ses-service.js';
+import queueService from './queue-service.js';
 import auditService from './audit-service';
 import { auditConst } from '../entity/audit-log';
 
@@ -338,7 +339,16 @@ const emailService = {
 					};
 				}
 
-				sendResult = await sesService.sendEmail(c, sendForm);
+				// 检查是否启用队列模式
+				const { queueEnabled, localSesApiUrl } = await settingService.query(c);
+
+				if (queueEnabled && localSesApiUrl) {
+					// 异步模式：放入队列立即返回
+					sendResult = await queueService.enqueueEmail(c, sendForm);
+				} else {
+					// 同步模式：直接调用 SES API
+					sendResult = await sesService.sendEmail(c, sendForm);
+				}
 			}
 
 		}

@@ -39,3 +39,7 @@ jwt_secret = "b7f29a1d-18e2-4d3b-941f-f6b2c97c02fd"
 #ses_secret_key = ""		#AWS SES 秘密密钥
 #ses_region = ""			#AWS SES 区域
 #ses_enabled = false		#是否启用 SES 邮件发送
+#local_ses_api_url = "http://localhost:3000"  #本地 SES API 地址（用于本地开发）
+#local_ses_api_key = ""    #本地 SES API 密钥
+#queue_enabled = true      #是否启用队列模式（需要 Cloudflare Queues）
+#local_ses_api_url = "http://host.docker.internal:3000"  #本地开发时 Docker API 地址

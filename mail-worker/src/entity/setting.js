@@ -52,6 +52,9 @@ export const setting = sqliteTable('setting', {
 	sesRegion: text('ses_region').default('').notNull(),
 	sesEnabled: integer('ses_enabled').default(0).notNull(),
 	sesTokens: text('ses_tokens').default("{}").notNull(),
-	sendMethodConfig: text('send_method_config').default("{}").notNull()
+	sendMethodConfig: text('send_method_config').default("{}").notNull(),
+	localSesApiUrl: text('local_ses_api_url').default('').notNull(),
+	localSesApiKey: text('local_ses_api_key').default('').notNull(),
+	queueEnabled: integer('queue_enabled').default(1).notNull()
 });
 export default setting

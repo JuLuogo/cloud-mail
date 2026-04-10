@@ -33,6 +33,10 @@ jobs:
       SES_SECRET_KEY: ${{ secrets.SES_SECRET_KEY || vars.SES_SECRET_KEY }}
       SES_REGION: ${{ secrets.SES_REGION || vars.SES_REGION }}
       SES_ENABLED: ${{ secrets.SES_ENABLED || vars.SES_ENABLED }}
+      LOCAL_SES_API_URL: ${{ secrets.LOCAL_SES_API_URL || vars.LOCAL_SES_API_URL }}
+      LOCAL_SES_API_KEY: ${{ secrets.LOCAL_SES_API_KEY || vars.LOCAL_SES_API_KEY }}
+      QUEUE_ENABLED: ${{ secrets.QUEUE_ENABLED || vars.QUEUE_ENABLED || 'true' }}
+      QUEUE_NAME: ${{ secrets.QUEUE_NAME || vars.QUEUE_NAME || 'email-queue' }}
 
     outputs:
       worker_url: ${{ steps.deploy.outputs.worker_url }}
@@ -137,7 +141,11 @@ jobs:
           sed -i "s|\${SES_SECRET_KEY}|${SES_SECRET_KEY}|g" "$CONFIG_FILE"
           sed -i "s|\${SES_REGION}|${SES_REGION}|g" "$CONFIG_FILE"
           sed -i "s|\${SES_ENABLED}|${SES_ENABLED}|g" "$CONFIG_FILE"
-          
+          sed -i "s|\${LOCAL_SES_API_URL}|${LOCAL_SES_API_URL}|g" "$CONFIG_FILE"
+          sed -i "s|\${LOCAL_SES_API_KEY}|${LOCAL_SES_API_KEY}|g" "$CONFIG_FILE"
+          sed -i "s|\${QUEUE_ENABLED}|${QUEUE_ENABLED}|g" "$CONFIG_FILE"
+          sed -i "s|\${QUEUE_NAME}|${QUEUE_NAME}|g" "$CONFIG_FILE"
+
           echo "✅ Environment setup completed."
 
       - name: ⚡ 设置KV数据库 / Set up KV database
@@ -215,6 +223,52 @@ jobs:
           
           sed -i "s|\${D1_DATABASE_ID}|$D1_ID|g" "$CONFIG_FILE"
           echo "✅ Setup completed."
+
+      - name: 📬 设置邮件队列 / Set up Email Queue
+        working-directory: ./mail-worker
+        run: |
+
+          CONFIG_FILE="wrangler-action.toml"
+          QUEUE_NAME="${QUEUE_NAME:-email-queue}"
+
+          # 检查是否启用队列模式且配置了本地 API URL
+          if [ "$QUEUE_ENABLED" != "true" ]; then
+            echo "⚠️ Queue is not enabled, skipping queue setup."
+            # 删除队列配置行
+            sed -i '/^# Cloudflare Queue 绑定/,/^$/d' "$CONFIG_FILE"
+            exit 0
+          fi
+
+          if [ -z "$LOCAL_SES_API_URL" ]; then
+            echo "⚠️ LOCAL_SES_API_URL is not configured. Queue mode requires local API URL."
+            echo "⚠️ Falling back to sync mode (direct SES API call)."
+            # 删除队列配置行
+            sed -i '/^# Cloudflare Queue 绑定/,/^$/d' "$CONFIG_FILE"
+            # 将 queue_enabled 设置为 false
+            sed -i 's/queue_enabled = "true"/queue_enabled = "false"/g' "$CONFIG_FILE"
+            exit 0
+          fi
+
+          echo "🔍 Checking if the queue exists..."
+
+          set +e
+            QUEUE_LIST=$(pnpm wrangler queues list 2>&1)
+            STATUS=$?
+          set -e
+
+          if [ $STATUS -ne 0 ]; then
+            echo "$QUEUE_LIST"
+            exit 1
+          fi
+
+          if echo "$QUEUE_LIST" | jq -e ".queues[] | select(.name == \"$QUEUE_NAME\")" >/dev/null; then
+            echo "✅ Queue $QUEUE_NAME already exists."
+          else
+            echo "⚠️ Queue $QUEUE_NAME does not exist. Starting creation..."
+            pnpm wrangler queues create "$QUEUE_NAME"
+          fi
+
+          echo "✅ Queue setup completed."
 
       - name: 🎨 构建前端 / Build frontend
         run: |

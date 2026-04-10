@@ -97,6 +97,22 @@ const settingService = {
 			}
 			setting.sesEnabled = sesEnabled ? 1 : 0;
 		}
+		// 从环境变量读取本地 SES API URL（用于通过本地 Docker 服务发送邮件）
+		if (c.env.local_ses_api_url) {
+			setting.localSesApiUrl = c.env.local_ses_api_url;
+		}
+		// 从环境变量读取本地 SES API 密钥
+		if (c.env.local_ses_api_key) {
+			setting.localSesApiKey = c.env.local_ses_api_key;
+		}
+		// 从环境变量读取是否启用队列模式
+		if (c.env.queue_enabled !== undefined && c.env.queue_enabled !== null && c.env.queue_enabled !== '') {
+			let queueEnabled = c.env.queue_enabled;
+			if (typeof queueEnabled === 'string') {
+				queueEnabled = queueEnabled.toLowerCase() === 'true' || queueEnabled === '1';
+			}
+			setting.queueEnabled = queueEnabled ? 1 : 0;
+		}
 
 		setting.emailPrefixFilter = setting.emailPrefixFilter.split(",").filter(Boolean);
 

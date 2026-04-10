@@ -47,6 +47,14 @@ linuxdo_switch = "${LINUXDO_SWITCH}"
 ses_access_key = "${SES_ACCESS_KEY}"
 ses_secret_key = "${SES_SECRET_KEY}"
 ses_region = "${SES_REGION}"
+local_ses_api_url = "${LOCAL_SES_API_URL}"
+local_ses_api_key = "${LOCAL_SES_API_KEY}"
+queue_enabled = "${QUEUE_ENABLED}"
+
+# Cloudflare Queue 绑定
+[[queues]]
+binding = "EMAIL_QUEUE"
+queue = "${QUEUE_NAME:-email-queue}"
 
 [build]
 command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"

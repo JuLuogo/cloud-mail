@@ -1,0 +1,16 @@
+{
+  "name": "local-ses-api",
+  "version": "1.0.0",
+  "description": "Local Docker API for sending emails via AWS SES",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.882.0",
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
+  }
+}
