@@ -232,7 +232,7 @@ jobs:
           CONFIG_FILE="wrangler-action.toml"
           QUEUE_NAME="${QUEUE_NAME:-email-queue}"
 
-          # 检查是否启用队列模式且配置了本地 API URL
+          # 检查是否启用队列模式
           if [ "$QUEUE_ENABLED" != "true" ]; then
             echo "⚠️ Queue is not enabled, skipping queue setup."
             # 删除队列配置行
@@ -240,14 +240,9 @@ jobs:
             exit 0
           fi
 
+          # LOCAL_SES_API_URL 仅在使用 SES 时需要，队列模式本身不需要
           if [ -z "$LOCAL_SES_API_URL" ]; then
-            echo "⚠️ LOCAL_SES_API_URL is not configured. Queue mode requires local API URL."
-            echo "⚠️ Falling back to sync mode."
-            # 删除队列配置行
-            sed -i '/^# Cloudflare Queue 绑定/,/^$/d' "$CONFIG_FILE"
-            # 将 queue_enabled 设置为 false
-            sed -i 's/queue_enabled = "true"/queue_enabled = "false"/g' "$CONFIG_FILE"
-            exit 0
+            echo "⚠️ LOCAL_SES_API_URL is not configured. Queue will use default consumer."
           fi
 
           echo "🔍 Setting up queue $QUEUE_NAME..."
