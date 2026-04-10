@@ -227,6 +227,7 @@ jobs:
       - name: 📬 设置邮件队列 / Set up Email Queue
         working-directory: ./mail-worker
         run: |
+          # 队列脚本不会导致部署失败
 
           CONFIG_FILE="wrangler-action.toml"
           QUEUE_NAME="${QUEUE_NAME:-email-queue}"
@@ -249,9 +250,9 @@ jobs:
             exit 0
           fi
 
-          echo "🔍 Creating queue $QUEUE_NAME..."
+          echo "🔍 Setting up queue $QUEUE_NAME..."
 
-          # 检查队列是否已存在
+          # 检查队列是否已存在（使用 list 命令）
           set +e
           LIST_OUTPUT=$(pnpm wrangler queues list 2>&1)
           LIST_STATUS=$?
@@ -260,24 +261,22 @@ jobs:
           if [ $LIST_STATUS -eq 0 ] && echo "$LIST_OUTPUT" | grep -qi "$QUEUE_NAME"; then
             echo "✅ Queue $QUEUE_NAME already exists."
           else
+            echo "🔍 Queue not found, attempting to create..."
+
             # 尝试创建队列，需要指定 account-id
             if [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
-              CREATE_OUTPUT=$(pnpm wrangler queues create "$QUEUE_NAME" --account-id "$CLOUDFLARE_ACCOUNT_ID" 2>&1)
+              CREATE_OUTPUT=$(pnpm wrangler queues create "$QUEUE_NAME" --account-id "$CLOUDFLARE_ACCOUNT_ID" 2>&1) || true
             else
-              CREATE_OUTPUT=$(pnpm wrangler queues create "$QUEUE_NAME" 2>&1)
+              CREATE_OUTPUT=$(pnpm wrangler queues create "$QUEUE_NAME" 2>&1) || true
             fi
-            CREATE_STATUS=$?
 
-            if [ $CREATE_STATUS -eq 0 ]; then
+            if echo "$CREATE_OUTPUT" | grep -qi "already exists"; then
+              echo "✅ Queue $QUEUE_NAME already exists."
+            elif echo "$CREATE_OUTPUT" | grep -qi "created"; then
               echo "✅ Queue $QUEUE_NAME created successfully."
             else
-              # 检查是否是因为队列已存在
-              if echo "$CREATE_OUTPUT" | grep -qi "already exists"; then
-                echo "✅ Queue $QUEUE_NAME already exists."
-              else
-                echo "⚠️ Queue creation returned: $CREATE_OUTPUT"
-                echo "⚠️ Continuing deployment anyway..."
-              fi
+              echo "⚠️ Queue setup info: $CREATE_OUTPUT"
+              echo "⚠️ Queue configuration will be handled by deployment."
             fi
           fi
 
