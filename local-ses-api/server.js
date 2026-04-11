@@ -54,7 +54,7 @@ function validateApiKey(req, res, next) {
   next();
 }
 
-// 发送邮件接口
+// 发送邮件接口（无附件）
 app.post('/send-email', validateApiKey, async (req, res) => {
   const requestId = crypto.randomUUID().slice(0, 8);
 
@@ -198,6 +198,58 @@ app.post('/send-email', validateApiKey, async (req, res) => {
     });
   } catch (error) {
     console.error(`[${requestId}] Error sending email:`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// 发送带附件的原始邮件接口
+app.post('/send-raw-email', validateApiKey, async (_req, res) => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+
+  try {
+    const { from, to, rawMessage } = _req.body;
+
+    console.log(`[${requestId}] Received raw email request:`, {
+      from,
+      to,
+      hasRawMessage: !!rawMessage
+    });
+
+    // 验证必需参数
+    if (!from || !to || !rawMessage) {
+      console.warn(`[${requestId}] Missing required parameters`);
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required parameters: from, to, rawMessage'
+      });
+    }
+
+    // rawMessage 是 base64 编码的
+    const rawBuffer = Buffer.from(rawMessage, 'base64');
+
+    console.log(`[${requestId}] Sending raw email with attachments...`);
+
+    const params = {
+      RawMessage: {
+        Data: rawBuffer,
+      },
+      FromEmailAddress: from,
+    };
+
+    const command = new SendRawEmailCommand(params);
+    const result = await sesClient.send(command);
+
+    console.log(`[${requestId}] Email sent successfully. MessageId: ${result.MessageId}`);
+
+    res.json({
+      success: true,
+      messageId: result.MessageId,
+    });
+  } catch (error) {
+    console.error(`[${requestId}] Error sending raw email:`, error);
     res.status(500).json({
       success: false,
       error: error.message,
