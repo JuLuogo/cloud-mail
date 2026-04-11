@@ -2,6 +2,19 @@ import settingService from './setting-service.js';
 
 const sesService = {
     /**
+     * 将 Uint8Array/ArrayBuffer 安全地编码为 base64（避免栈溢出）
+     */
+    uint8ArrayToBase64(data) {
+        const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+        let binary = '';
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    },
+
+    /**
      * 构建 MIME 邮件的 boundary
      */
     generateBoundary() {
@@ -33,12 +46,12 @@ const sesService = {
             }
             return btoa(unescape(encodeURIComponent(str)));
         }
-        // 如果是 ArrayBuffer 或 Uint8Array
+        // 如果是 ArrayBuffer 或 Uint8Array，使用安全方法避免栈溢出
         if (str instanceof ArrayBuffer) {
-            return btoa(String.fromCharCode(...new Uint8Array(str)));
+            return this.uint8ArrayToBase64(str);
         }
         if (str instanceof Uint8Array) {
-            return btoa(String.fromCharCode(...str));
+            return this.uint8ArrayToBase64(str);
         }
         return btoa(unescape(encodeURIComponent(String(str))));
     },
@@ -248,8 +261,8 @@ const sesService = {
                     body: JSON.stringify({
                         from,
                         to: Array.isArray(to) ? to : [to],
-                        // 将 Uint8Array 转换为 base64
-                        rawMessage: btoa(String.fromCharCode(...rawEmail))
+                        // 将 Uint8Array 安全地转换为 base64（避免栈溢出）
+                        rawMessage: this.uint8ArrayToBase64(rawEmail)
                     }),
                 });
 
