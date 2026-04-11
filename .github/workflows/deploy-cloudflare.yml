@@ -35,7 +35,6 @@ jobs:
       SES_ENABLED: ${{ secrets.SES_ENABLED || vars.SES_ENABLED }}
       LOCAL_SES_API_URL: ${{ secrets.LOCAL_SES_API_URL || vars.LOCAL_SES_API_URL }}
       LOCAL_SES_API_KEY: ${{ secrets.LOCAL_SES_API_KEY || vars.LOCAL_SES_API_KEY }}
-      QUEUE_ENABLED: ${{ secrets.QUEUE_ENABLED || vars.QUEUE_ENABLED || 'true' }}
       QUEUE_NAME: ${{ secrets.QUEUE_NAME || vars.QUEUE_NAME || 'email-queue' }}
 
     outputs:
@@ -151,7 +150,6 @@ jobs:
           sed -i "s|\${SES_ENABLED}|${SES_ENABLED}|g" "$CONFIG_FILE"
           sed -i "s|\${LOCAL_SES_API_URL}|${LOCAL_SES_API_URL}|g" "$CONFIG_FILE"
           sed -i "s|\${LOCAL_SES_API_KEY}|${LOCAL_SES_API_KEY}|g" "$CONFIG_FILE"
-          sed -i "s|\${QUEUE_ENABLED}|${QUEUE_ENABLED}|g" "$CONFIG_FILE"
           sed -i "s|\${QUEUE_NAME}|${QUEUE_NAME}|g" "$CONFIG_FILE"
 
           echo "✅ Environment setup completed."
@@ -239,20 +237,6 @@ jobs:
 
           CONFIG_FILE="wrangler-action.toml"
           QUEUE_NAME="${QUEUE_NAME:-email-queue}"
-
-          # 检查是否启用队列模式
-          if [ "$QUEUE_ENABLED" != "true" ]; then
-            echo "⚠️ Queue is not enabled, skipping queue setup."
-            # 删除整个 [queues] 块，再删除注释行，互不干扰
-            sed -i '/^\[queues\]/,/^$/d' "$CONFIG_FILE"
-            sed -i '/^# Cloudflare Queue 绑定/d' "$CONFIG_FILE"
-            exit 0
-          fi
-
-          # LOCAL_SES_API_URL 仅在使用 SES 时需要，队列模式本身不需要
-          if [ -z "$LOCAL_SES_API_URL" ]; then
-            echo "⚠️ LOCAL_SES_API_URL is not configured. Queue will use default consumer."
-          fi
 
           echo "🔍 Setting up queue $QUEUE_NAME..."
 
