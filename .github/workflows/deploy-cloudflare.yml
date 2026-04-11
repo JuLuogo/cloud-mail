@@ -243,8 +243,8 @@ jobs:
           # 检查是否启用队列模式
           if [ "$QUEUE_ENABLED" != "true" ]; then
             echo "⚠️ Queue is not enabled, skipping queue setup."
-            # 删除整个 [[queue_producers]] 块，再删除注释行，互不干扰
-            sed -i '/^\[\[queue_producers\]\]/,/^$/d' "$CONFIG_FILE"
+            # 删除整个 [queues] 块，再删除注释行，互不干扰
+            sed -i '/^\[queues\]/,/^$/d' "$CONFIG_FILE"
             sed -i '/^# Cloudflare Queue 绑定/d' "$CONFIG_FILE"
             exit 0
           fi
@@ -294,7 +294,7 @@ jobs:
         working-directory: ./mail-worker
         run: |
           echo "=== wrangler-action.toml queue section ==="
-          grep -A3 "queue_producers" wrangler-action.toml || echo "NOT FOUND"
+          grep -A3 "queues" wrangler-action.toml || echo "NOT FOUND"
 
           echo "🚀 Starting deployment..."
           pnpm wrangler deploy -c wrangler-action.toml 2>&1 \

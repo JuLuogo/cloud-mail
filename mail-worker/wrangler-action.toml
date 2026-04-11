@@ -52,9 +52,8 @@ local_ses_api_key = "${LOCAL_SES_API_KEY}"
 queue_enabled = "${QUEUE_ENABLED}"
 
 # Cloudflare Queue 绑定
-[[queue_producers]]
-binding = "EMAIL_QUEUE"
-queue = "${QUEUE_NAME}"
+[queues]
+producers = [{binding = "EMAIL_QUEUE", queue = "${QUEUE_NAME}"}]
 
 [build]
 command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"
