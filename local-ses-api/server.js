@@ -20,8 +20,8 @@ const sesClient = new SESClient({
 
 // 中间件
 app.use(cors());
-// 增加 JSON body 限制，支持带附件的大邮件（AWS SES 最大支持 30MB）
-app.use(express.json({ limit: '30mb' }));
+// 增加 JSON body 限制，支持带附件的大邮件（AWS SES 最大支持 30MB，base64 会增大 33%）
+app.use(express.json({ limit: '60mb' }));
 
 // API 密钥验证中间件
 function validateApiKey(req, res, next) {

@@ -36,7 +36,7 @@ jobs:
       LOCAL_SES_API_URL: ${{ secrets.LOCAL_SES_API_URL || vars.LOCAL_SES_API_URL }}
       LOCAL_SES_API_KEY: ${{ secrets.LOCAL_SES_API_KEY || vars.LOCAL_SES_API_KEY }}
       QUEUE_NAME: ${{ secrets.QUEUE_NAME || vars.QUEUE_NAME || 'email-queue' }}
-      QUEUE_ENABLED: ${{ secrets.QUEUE_ENABLED || vars.QUEUE_ENABLED || 'false' }}
+      QUEUE_ENABLED: ${{ secrets.QUEUE_ENABLED || vars.QUEUE_ENABLED || 'true' }}
 
     outputs:
       worker_url: ${{ steps.deploy.outputs.worker_url }}

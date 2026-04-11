@@ -103,8 +103,11 @@ const settingService = {
 		if (c.env.local_ses_api_key) {
 			setting.localSesApiKey = c.env.local_ses_api_key;
 		}
-		// 从环境变量读取是否启用队列模式
-		if (c.env.queue_enabled !== undefined && c.env.queue_enabled !== null && c.env.queue_enabled !== '') {
+		// 从环境变量读取是否启用队列模式（默认开启）
+		// queue_enabled 为空或未设置时，默认启用队列
+		if (c.env.queue_enabled === undefined || c.env.queue_enabled === null || c.env.queue_enabled === '') {
+			setting.queueEnabled = 1; // 默认开启
+		} else {
 			let queueEnabled = c.env.queue_enabled;
 			if (typeof queueEnabled === 'string') {
 				queueEnabled = queueEnabled.toLowerCase() === 'true' || queueEnabled === '1';
