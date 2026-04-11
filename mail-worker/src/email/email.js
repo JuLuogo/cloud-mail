@@ -176,8 +176,6 @@ export async function email(message, env, ctx) {
 			const targetDomain = '@' + emailUtils.getDomain(forwardTo);
 			const isInternalDomain = domainList.includes(targetDomain);
 
-			console.log(`[Catch-all] 匹配: ${message.to} -> ${forwardTo}, 内部域名: ${isInternalDomain}`);
-
 			if (isInternalDomain) {
 				// 内部域名：直接保存邮件到目标用户收件箱
 				try {

@@ -210,8 +210,6 @@ const forwardRuleService = {
 			))
 			.orderBy(desc(forwardRule.priority))
 			.all();
-		console.log(`[getEnabledRules] 查询结果: ${result.length} 条规则`);
-		console.log(`[getEnabledRules] 原始数据:`, JSON.stringify(result));
 		return result;
 	},
 
