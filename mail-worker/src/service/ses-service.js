@@ -249,24 +249,32 @@ const sesService = {
 
             // 构建 MIME 邮件
             const rawEmail = this.buildMimeEmail(params);
+            const rawEmailBase64 = this.uint8ArrayToBase64(rawEmail);
+
+            console.log('[SES] MIME email built, size:', rawEmail.length, 'bytes, base64 size:', rawEmailBase64.length);
+
+            // 构造请求体
+            const requestBody = {
+                from,
+                to: Array.isArray(to) ? to : [to],
+                rawMessage: rawEmailBase64
+            };
+
+            console.log('[SES] Request body prepared, JSON size:', JSON.stringify(requestBody).length);
 
             try {
                 const response = await fetch(`${localSesApiUrl}/send-raw-email`, {
                     method: 'POST',
                     headers: {
                         'content-type': 'application/json',
-                        'content-length': rawEmail.length.toString(),
+                        'content-length': JSON.stringify(requestBody).length.toString(),
                         ...(localSesApiKey && { 'x-api-key': localSesApiKey }),
                     },
-                    body: JSON.stringify({
-                        from,
-                        to: Array.isArray(to) ? to : [to],
-                        // 将 Uint8Array 安全地转换为 base64（避免栈溢出）
-                        rawMessage: this.uint8ArrayToBase64(rawEmail)
-                    }),
+                    body: JSON.stringify(requestBody),
                 });
 
                 const responseText = await response.text();
+                console.log('[SES] Raw email API response:', response.status, responseText);
 
                 if (!response.ok) {
                     throw new Error(`Local SES API request failed: ${response.status} ${responseText}`);
