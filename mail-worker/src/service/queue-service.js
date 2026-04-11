@@ -281,6 +281,8 @@ const queueService = {
      * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
      */
     async processEmailMessage(env, message) {
+        console.log(`[Queue] Processing message:`, JSON.stringify(message).slice(0, 500));
+
         const { type, data } = message;
 
         if (type !== 'send_email') {
@@ -288,6 +290,8 @@ const queueService = {
         }
 
         const { from, to, subject, text, html, headers, attachments } = data;
+        console.log(`[Queue] Email details - From: ${from}, To: ${JSON.stringify(to)}, Subject: ${subject}`);
+        console.log(`[Queue] Has text: !!text, Has html: !!html, Has headers: !!headers, Attachments count: ${attachments?.length || 0}`);
 
         // 构建请求参数
         const requestBody = {
@@ -307,9 +311,10 @@ const queueService = {
         // 如果有附件，从 R2 下载
         if (attachments && attachments.length > 0) {
             console.log(`[Queue] Downloading ${attachments.length} attachments from R2...`);
+            console.log(`[Queue] Attachment keys:`, attachments.map(a => a.r2Key));
             try {
                 requestBody.attachments = await this.downloadAttachmentsFromR2(env, attachments);
-                console.log(`[Queue] Attachments downloaded from R2 successfully`);
+                console.log(`[Queue] Attachments downloaded successfully, sizes:`, requestBody.attachments.map(a => a.content?.length || a.content?.byteLength || 0));
             } catch (error) {
                 console.error('[Queue] Failed to download attachments from R2:', error);
                 return {
@@ -323,32 +328,46 @@ const queueService = {
             const localApiUrl = env.LOCAL_SES_API_URL;
             const apiKey = env.LOCAL_SES_API_KEY;
 
+            console.log(`[Queue] Local API URL: ${localApiUrl}, Has API Key: !!apiKey`);
+
             if (!localApiUrl) {
                 throw new Error('LOCAL_SES_API_URL not configured');
             }
 
             // 根据是否有附件选择不同的 API 端点
             const endpoint = requestBody.attachments ? '/send-raw-email' : '/send-email';
+            console.log(`[Queue] Using endpoint: ${endpoint}`);
 
             // 如果有附件，需要构建 raw MIME 邮件
             let response;
             if (requestBody.attachments) {
-                // 使用 send-raw-email 端点发送带附件的邮件
-                const rawMessage = await this.buildRawEmail(requestBody);
-                response = await fetch(`${localApiUrl}${endpoint}`, {
-                    method: 'POST',
-                    headers: {
-                        'content-type': 'application/json',
-                        ...(apiKey && { 'x-api-key': apiKey }),
-                    },
-                    body: JSON.stringify({
+                console.log(`[Queue] Building raw email with ${requestBody.attachments.length} attachment(s)...`);
+                try {
+                    const rawMessage = await this.buildRawEmail(requestBody);
+                    console.log(`[Queue] Raw message size: ${(rawMessage.length / 1024).toFixed(2)} KB`);
+
+                    const payload = {
                         from: requestBody.from,
                         to: requestBody.to,
                         rawMessage: rawMessage,
-                    }),
-                });
+                    };
+                    console.log(`[Queue] Sending request to: ${localApiUrl}${endpoint}`);
+                    console.log(`[Queue] Payload size: ${(JSON.stringify(payload).length / 1024).toFixed(2)} KB`);
+
+                    response = await fetch(`${localApiUrl}${endpoint}`, {
+                        method: 'POST',
+                        headers: {
+                            'content-type': 'application/json',
+                            ...(apiKey && { 'x-api-key': apiKey }),
+                        },
+                        body: JSON.stringify(payload),
+                    });
+                } catch (buildError) {
+                    console.error(`[Queue] Failed to build or send raw email:`, buildError);
+                    throw buildError;
+                }
             } else {
-                // 无附件，使用标准 send-email 端点
+                console.log(`[Queue] Sending standard email request...`);
                 response = await fetch(`${localApiUrl}${endpoint}`, {
                     method: 'POST',
                     headers: {
@@ -359,19 +378,27 @@ const queueService = {
                 });
             }
 
+            console.log(`[Queue] Response status: ${response.status} ${response.statusText}`);
+
             const result = await response.text();
+            console.log(`[Queue] Response body: ${result.slice(0, 500)}`);
 
             if (!response.ok) {
                 throw new Error(`Local API failed: ${response.status} ${result}`);
             }
 
-            const parsed = JSON.parse(result);
+            let parsed;
+            try {
+                parsed = JSON.parse(result);
+            } catch (parseError) {
+                throw new Error(`Invalid JSON response from Local API: ${result.slice(0, 200)}`);
+            }
 
             if (!parsed.success) {
                 throw new Error(parsed.error || 'Unknown error from Local API');
             }
 
-            console.log(`[Queue] Email sent successfully: ${parsed.messageId}`);
+            console.log(`[Queue] ✅ Email sent successfully! MessageId: ${parsed.messageId}`);
 
             // 发送成功后清理 R2 中的临时附件
             if (attachments && attachments.length > 0) {
@@ -383,7 +410,8 @@ const queueService = {
                 messageId: parsed.messageId,
             };
         } catch (error) {
-            console.error('[Queue] Failed to send email:', error);
+            console.error(`[Queue] ❌ Failed to send email:`, error);
+            console.error(`[Queue] Error stack:`, error.stack);
             return {
                 success: false,
                 error: error.message,
