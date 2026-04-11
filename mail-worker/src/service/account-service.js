@@ -234,7 +234,15 @@ const accountService = {
 
 		const userRow = await userService.selectByIdIncludeDel(c, userId);
 
-		const list = await orm(c).select().from(account).where(and(eq(account.userId, userId),ne(account.email,userRow.email))).limit(size).offset(num);
+		// 排除当前用户的主邮箱（如果用户不存在则不过滤）
+		const excludeEmail = userRow ? userRow.email : null;
+		const emailFilter = excludeEmail ? ne(account.email, excludeEmail) : undefined;
+		const conditions = [eq(account.userId, userId)];
+		if (emailFilter) {
+			conditions.push(emailFilter);
+		}
+
+		const list = await orm(c).select().from(account).where(and(...conditions)).limit(size).offset(num);
 		const { total } = await orm(c).select({ total: count() }).from(account).where(eq(account.userId, userId)).get();
 
 		return { list, total }
@@ -259,7 +267,6 @@ const accountService = {
 
 	async setAsTop(c, params, userId) {
 		const { accountId } = params;
-		console.log(accountId);
 		const userRow = await userService.selectById(c, userId);
 		const mainAccountRow = await accountService.selectByEmailIncludeDel(c, userRow.email);
 		let mainSort = mainAccountRow.sort === 0 ? 2 : mainAccountRow.sort + 1;

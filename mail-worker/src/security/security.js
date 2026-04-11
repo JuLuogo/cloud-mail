@@ -97,7 +97,7 @@ const requirePerms = [
 	'/forward-rule/toggle'
 ];
 
-const premKey = {
+const permKey = {
 	'email:delete': ['/email/delete'],
 	'email:send': ['/email/send'],
 	'email:archive:query': ['/email/archiveList'],
@@ -231,7 +231,7 @@ function permKeyToPaths(permKeys) {
 	const paths = [];
 
 	for (const key of permKeys) {
-		const routeList = premKey[key];
+		const routeList = permKey[key];
 		if (routeList && Array.isArray(routeList)) {
 			paths.push(...routeList);
 		}

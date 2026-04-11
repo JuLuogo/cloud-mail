@@ -4,6 +4,10 @@ const kvObjService = {
 		await c.env.kv.put(key, content, { metadata: metadata });
 	},
 
+	async getObj(c, key) {
+		return await c.env.kv.get(key);
+	},
+
 	async deleteObj(c, keys) {
 
 		if (typeof keys === 'string') {

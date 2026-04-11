@@ -1,6 +1,6 @@
 import orm from '../entity/orm';
 import { contact, contactGroup } from '../entity/contact';
-import { and, eq, desc, asc, count, like, or } from 'drizzle-orm';
+import { and, eq, desc, asc, count, like, or, sql } from 'drizzle-orm';
 import { t } from '../i18n/i18n';
 import BizError from '../error/biz-error';
 
@@ -120,7 +120,7 @@ const contactService = {
 
 	async incrementSendCount(c, emailAddr, userId) {
 		await orm(c).update(contact).set({
-			sendCount: contact.sendCount + 1,
+			sendCount: sql`${contact.sendCount} + 1`,
 			lastSendTime: new Date().toISOString()
 		}).where(and(eq(contact.email, emailAddr), eq(contact.userId, userId))).run();
 	}

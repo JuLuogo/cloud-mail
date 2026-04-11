@@ -239,7 +239,7 @@ const roleService = {
 
 	selectByUserIds(c, userIds) {
 
-		if (!userIds && userIds.length === 0) {
+		if (!userIds || userIds.length === 0) {
 			return [];
 		}
 

@@ -203,6 +203,29 @@ const attService = {
 			.all();
 	},
 
+	async copyByEmailId(c, sourceEmailId, targetEmailId, targetUserId, targetAccountId) {
+		const sourceAtts = await orm(c).select().from(att).where(eq(att.emailId, sourceEmailId)).all();
+		if (sourceAtts.length === 0) {
+			return;
+		}
+		const newAtts = sourceAtts.map(sourceAtt => ({
+			userId: targetUserId,
+			emailId: targetEmailId,
+			accountId: targetAccountId,
+			key: sourceAtt.key,
+			filename: sourceAtt.filename,
+			mimeType: sourceAtt.mimeType,
+			size: sourceAtt.size,
+			status: sourceAtt.status,
+			type: sourceAtt.type,
+			disposition: sourceAtt.disposition,
+			related: sourceAtt.related,
+			contentId: sourceAtt.contentId,
+			encoding: sourceAtt.encoding
+		}));
+		await orm(c).insert(att).values(newAtts).run();
+	},
+
 	async removeAttByField(c, fieldName, fieldValues) {
 
 		const sqlList = [];

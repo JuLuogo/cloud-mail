@@ -90,12 +90,14 @@ export async function email(message, env, ctx) {
 		}
 
 		const toName = email.to.find(item => item.address === message.to)?.name || '';
+		const fromAddress = email.from?.address || '';
+		const fromName = email.from?.name || emailUtils.getName(fromAddress);
 
 		const params = {
 			toEmail: message.to,
 			toName: toName,
-			sendEmail: email.from.address,
-			name: email.from.name || emailUtils.getName(email.from.address),
+			sendEmail: fromAddress,
+			name: fromName,
 			subject: email.subject,
 			content: email.html,
 			text: email.text,
@@ -174,8 +176,6 @@ export async function email(message, env, ctx) {
 			const targetDomain = '@' + emailUtils.getDomain(forwardTo);
 			const isInternalDomain = domainList.includes(targetDomain);
 
-			console.log(`[Catch-all] 匹配: ${message.to} -> ${forwardTo}, 内部域名: ${isInternalDomain}`);
-
 			if (isInternalDomain) {
 				// 内部域名：直接保存邮件到目标用户收件箱
 				try {
@@ -202,7 +202,13 @@ export async function email(message, env, ctx) {
 							status: emailConst.status.RECEIVE
 						};
 
-						await orm({ env }).insert(emailEntity).values(emailData).returning().get();
+						const newEmailRow = await orm({ env }).insert(emailEntity).values(emailData).returning().get();
+
+						// 复制原邮件的附件到新邮件
+						if (emailRow && emailRow.emailId) {
+							await attService.copyByEmailId({ env }, emailRow.emailId, newEmailRow.emailId, targetAccount.userId, targetAccount.accountId);
+						}
+
 						console.log(`[Catch-all] 内部转发成功: ${message.to} -> ${forwardTo}`);
 					} else {
 						console.error(`[Catch-all] 内部转发失败: 目标账户不存在 ${forwardTo}`);

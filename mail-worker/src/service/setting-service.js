@@ -121,7 +121,7 @@ const settingService = {
 	async get(c, showSiteKey = false) {
 
 		const [settingRow, recordList] = await Promise.all([
-			await this.query(c),
+			this.query(c),
 			verifyRecordService.selectListByIP(c)
 		]);
 
