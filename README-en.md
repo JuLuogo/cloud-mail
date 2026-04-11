@@ -1,6 +1,6 @@
 <p align="center">
     <img src="doc/demo/logo.png" width="80px" />
-    <h1 align="center">Cloud Mail</h1>
+    <h1 align="center">Peroe Mail</h1>
     <p align="center">A simple, responsive email service designed to run on Cloudflare Workers 🎉</p> 
     <p align="center">
        <a href="/README.md" style="margin-left: 5px">简体中文</a> | English 

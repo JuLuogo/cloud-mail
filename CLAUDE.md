@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目简介
 
-Cloud Mail 是一个基于 Cloudflare 的简约响应式邮箱服务，支持邮件发送、附件收发等功能。可部署到 Cloudflare Workers，降低服务器成本，适合搭建自己的邮箱服务。
+Peroe Mail 是一个基于 Cloudflare 的简约响应式邮箱服务，支持邮件发送、附件收发等功能。可部署到 Cloudflare Workers，降低服务器成本，适合搭建自己的邮箱服务。
 
 ## 技术栈
 
@@ -31,7 +31,7 @@ Cloud Mail 是一个基于 Cloudflare 的简约响应式邮箱服务，支持邮
 ## 项目结构
 
 ```
-cloud-mail/
+peroe-mail/
 ├── mail-worker/              # Worker 后端项目
 │   ├── src/
 │   │   ├── api/             # API 接口层 (包含所有路由定义)
