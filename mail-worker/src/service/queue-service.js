@@ -8,7 +8,6 @@
  */
 
 import r2Service from './r2-service';
-import { randomUUID } from 'crypto';
 
 const queueService = {
     /**
@@ -88,7 +87,10 @@ const queueService = {
      */
     generateR2Key(filename) {
         const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        const uuid = randomUUID().replace(/-/g, '').slice(0, 12);
+        // 使用 Web Crypto API 生成随机字符串（兼容 Cloudflare Workers）
+        const array = new Uint8Array(6);
+        crypto.getRandomValues(array);
+        const uuid = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
         const safeName = this.sanitizeFilename(filename);
         return `email-queue-att/${date}/${uuid}/${safeName}`;
     },
