@@ -53,6 +53,7 @@ local_ses_api_key = "${LOCAL_SES_API_KEY}"
 # Cloudflare Queue 绑定
 [queues]
 producers = [{binding = "EMAIL_QUEUE", queue = "${QUEUE_NAME}"}]
+consumers = [{queue = "${QUEUE_NAME}", max_batch_size = 1, max_batch_timeout = 30}]
 
 [build]
 command = "pnpm --prefix ../mail-vue install && pnpm --prefix ../mail-vue run build"
