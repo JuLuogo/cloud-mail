@@ -300,8 +300,8 @@ const queueService = {
         console.log(`[Queue] Has text: !!text, Has html: !!html, Has headers: !!headers, Attachments count: ${attachments?.length || 0}`);
 
         try {
-            const localApiUrl = env.LOCAL_SES_API_URL;
-            const apiKey = env.LOCAL_SES_API_KEY;
+            const localApiUrl = env.local_ses_api_url;
+            const apiKey = env.local_ses_api_key;
 
             console.log(`[Queue] Local API URL: ${localApiUrl}, Has API Key: !!apiKey`);
 
