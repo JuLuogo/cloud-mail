@@ -41,6 +41,7 @@ const dbInit = {
 		await this.v2_19DB(c);
 		await this.v2_20DB(c);
 		await this.v2_21DB(c);
+		await this.v2_22DB(c);
 		await settingService.refresh(c);
 		return c.text('success');
 	},
@@ -278,6 +279,15 @@ const dbInit = {
 			`).run();
 		} catch (e) {
 			console.warn(`跳过权限数据：${e.message}`);
+		}
+	},
+
+	async v2_22DB(c) {
+		// 为 tg_channel 表添加 thread_id 列（论坛话题模式支持）
+		try {
+			await c.env.db.prepare(`ALTER TABLE tg_channel ADD COLUMN thread_id INTEGER NOT NULL DEFAULT 0;`).run();
+		} catch (e) {
+			console.warn(`跳过字段添加：${e.message}`);
 		}
 	},
 
