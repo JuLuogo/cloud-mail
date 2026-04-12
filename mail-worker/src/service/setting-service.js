@@ -1,12 +1,12 @@
 import KvConst from '../const/kv-const';
 import setting from '../entity/setting';
 import orm from '../entity/orm';
-import {verifyRecordType} from '../const/entity-const';
+import { verifyRecordType } from '../const/entity-const';
 import fileUtils from '../utils/file-utils';
 import r2Service from './r2-service';
 import constant from '../const/constant';
 import BizError from '../error/biz-error';
-import {t} from '../i18n/i18n'
+import { t } from '../i18n/i18n';
 import verifyRecordService from './verify-record-service';
 import auditService from './audit-service';
 import { auditConst } from '../entity/audit-log';
@@ -15,7 +15,6 @@ import { forwardRule } from '../entity/forward-rule';
 import { lt, eq, and } from 'drizzle-orm';
 
 const settingService = {
-
 	async refresh(c) {
 		const settingRow = await orm(c).select().from(setting).get();
 		settingRow.resendTokens = JSON.parse(settingRow.resendTokens);
@@ -26,9 +25,8 @@ const settingService = {
 	},
 
 	async query(c) {
-
 		if (c.get?.('setting')) {
-			return c.get('setting')
+			return c.get('setting');
 		}
 
 		const setting = await c.env.kv.get(KvConst.SETTING, { type: 'json' });
@@ -41,7 +39,7 @@ const settingService = {
 
 		if (typeof domainList === 'string') {
 			try {
-				domainList = JSON.parse(domainList)
+				domainList = JSON.parse(domainList);
 			} catch (error) {
 				throw new BizError(t('notJsonDomain'));
 			}
@@ -51,27 +49,26 @@ const settingService = {
 			throw new BizError(t('noDomainVariable'));
 		}
 
-		domainList = domainList.map(item => '@' + item);
+		domainList = domainList.map((item) => '@' + item);
 		setting.domainList = domainList;
-
 
 		let linuxdoSwitch = c.env.linuxdo_switch;
 		let projectLink = c.env.project_link;
 
 		if (typeof linuxdoSwitch === 'string' && linuxdoSwitch === 'true') {
-			linuxdoSwitch = true
+			linuxdoSwitch = true;
 		} else if (linuxdoSwitch === true) {
-			linuxdoSwitch = true
+			linuxdoSwitch = true;
 		} else {
-			linuxdoSwitch = false
+			linuxdoSwitch = false;
 		}
 
 		if (typeof projectLink === 'string' && projectLink === 'false') {
-			projectLink = false
+			projectLink = false;
 		} else if (projectLink === false) {
-			projectLink = false
+			projectLink = false;
 		} else {
-			projectLink = true
+			projectLink = true;
 		}
 
 		setting.projectLink = projectLink;
@@ -118,19 +115,14 @@ const settingService = {
 			setting.queueEnabled = queueEnabled ? 1 : 0;
 		}
 
-		setting.emailPrefixFilter = setting.emailPrefixFilter.split(",").filter(Boolean);
+		setting.emailPrefixFilter = setting.emailPrefixFilter.split(',').filter(Boolean);
 
 		c.set?.('setting', setting);
 		return setting;
 	},
 
 	async get(c, showSiteKey = false) {
-
-		const [settingRow, recordList] = await Promise.all([
-			this.query(c),
-			verifyRecordService.selectListByIP(c)
-		]);
-
+		const [settingRow, recordList] = await Promise.all([this.query(c), verifyRecordService.selectListByIP(c)]);
 
 		if (!showSiteKey) {
 			settingRow.siteKey = settingRow.siteKey ? `${settingRow.siteKey.slice(0, 6)}******` : null;
@@ -138,11 +130,11 @@ const settingService = {
 
 		settingRow.secretKey = settingRow.secretKey ? `${settingRow.secretKey.slice(0, 6)}******` : null;
 
-		Object.keys(settingRow.resendTokens).forEach(key => {
+		Object.keys(settingRow.resendTokens).forEach((key) => {
 			settingRow.resendTokens[key] = `${settingRow.resendTokens[key].slice(0, 12)}******`;
 		});
 
-		Object.keys(settingRow.sesTokens).forEach(key => {
+		Object.keys(settingRow.sesTokens).forEach((key) => {
 			settingRow.sesTokens[key] = `${settingRow.sesTokens[key].slice(0, 12)}******`;
 		});
 
@@ -150,22 +142,22 @@ const settingService = {
 		settingRow.s3SecretKey = settingRow.s3SecretKey ? `${settingRow.s3SecretKey.slice(0, 12)}******` : null;
 		settingRow.sesAccessKey = settingRow.sesAccessKey ? `${settingRow.sesAccessKey.slice(0, 12)}******` : null;
 		settingRow.sesSecretKey = settingRow.sesSecretKey ? `${settingRow.sesSecretKey.slice(0, 12)}******` : null;
-		settingRow.hasR2 = !!c.env.r2
+		settingRow.hasR2 = !!c.env.r2;
 
-		let regVerifyOpen = false
-		let addVerifyOpen = false
+		let regVerifyOpen = false;
+		let addVerifyOpen = false;
 
-		recordList.forEach(row => {
+		recordList.forEach((row) => {
 			if (row.type === verifyRecordType.REG) {
-				regVerifyOpen = row.count >= settingRow.regVerifyCount
+				regVerifyOpen = row.count >= settingRow.regVerifyCount;
 			}
 			if (row.type === verifyRecordType.ADD) {
-				addVerifyOpen = row.count >= settingRow.addVerifyCount
+				addVerifyOpen = row.count >= settingRow.addVerifyCount;
 			}
-		})
+		});
 
-		settingRow.regVerifyOpen = regVerifyOpen
-		settingRow.addVerifyOpen = addVerifyOpen
+		settingRow.regVerifyOpen = regVerifyOpen;
+		settingRow.addVerifyOpen = addVerifyOpen;
 
 		settingRow.storageType = await r2Service.storageType(c);
 
@@ -175,17 +167,17 @@ const settingService = {
 	async set(c, params, operatorInfo) {
 		const settingData = await this.query(c);
 		let resendTokens = { ...settingData.resendTokens, ...params.resendTokens };
-		Object.keys(resendTokens).forEach(domain => {
+		Object.keys(resendTokens).forEach((domain) => {
 			if (!resendTokens[domain]) delete resendTokens[domain];
 		});
 
 		let sesTokens = { ...settingData.sesTokens, ...params.sesTokens };
-		Object.keys(sesTokens).forEach(domain => {
+		Object.keys(sesTokens).forEach((domain) => {
 			if (!sesTokens[domain]) delete sesTokens[domain];
 		});
 
 		let sendMethodConfig = { ...settingData.sendMethodConfig, ...params.sendMethodConfig };
-		Object.keys(sendMethodConfig).forEach(domain => {
+		Object.keys(sendMethodConfig).forEach((domain) => {
 			if (!sendMethodConfig[domain]) delete sendMethodConfig[domain];
 		});
 
@@ -196,7 +188,11 @@ const settingService = {
 		params.resendTokens = JSON.stringify(resendTokens);
 		params.sesTokens = JSON.stringify(sesTokens);
 		params.sendMethodConfig = JSON.stringify(sendMethodConfig);
-		await orm(c).update(setting).set({ ...params }).returning().get();
+		await orm(c)
+			.update(setting)
+			.set({ ...params })
+			.returning()
+			.get();
 		await this.refresh(c);
 
 		// 审计日志
@@ -206,48 +202,43 @@ const settingService = {
 			action: auditConst.action.SETTING_UPDATE,
 			targetType: auditConst.targetType.SETTING,
 			targetDesc: 'System Settings',
-			detail: { changedKeys: Object.keys(params) }
+			detail: { changedKeys: Object.keys(params) },
 		});
 	},
 
 	async deleteBackground(c) {
-
 		const { background } = await this.query(c);
-		if (!background) return
+		if (!background) return;
 
 		if (background.startsWith('http')) {
 			await orm(c).update(setting).set({ background: '' }).run();
-			await this.refresh(c)
+			await this.refresh(c);
 			return;
 		}
 
 		if (background) {
-			await r2Service.delete(c,background)
+			await r2Service.delete(c, background);
 			await orm(c).update(setting).set({ background: '' }).run();
-			await this.refresh(c)
+			await this.refresh(c);
 		}
 	},
 
 	async setBackground(c, params) {
-
-		let { background } = params
+		let { background } = params;
 
 		await this.deleteBackground(c);
 
 		if (background && !background.startsWith('http')) {
-
-			const file = fileUtils.base64ToFile(background)
+			const file = fileUtils.base64ToFile(background);
 
 			const arrayBuffer = await file.arrayBuffer();
-			background = constant.BACKGROUND_PREFIX + await fileUtils.getBuffHash(arrayBuffer) + fileUtils.getExtFileName(file.name);
-
+			background = constant.BACKGROUND_PREFIX + (await fileUtils.getBuffHash(arrayBuffer)) + fileUtils.getExtFileName(file.name);
 
 			await r2Service.putObj(c, background, arrayBuffer, {
 				contentType: file.type,
 				cacheControl: `public, max-age=31536000, immutable`,
-				contentDisposition: `inline; filename="${file.name}"`
+				contentDisposition: `inline; filename="${file.name}"`,
 			});
-
 		}
 
 		await orm(c).update(setting).set({ background }).run();
@@ -256,7 +247,6 @@ const settingService = {
 	},
 
 	async websiteConfig(c) {
-
 		const settingRow = await this.get(c, true);
 
 		return {
@@ -289,14 +279,14 @@ const settingService = {
 			linuxdoCallbackUrl: settingRow.linuxdoCallbackUrl,
 			linuxdoSwitch: settingRow.linuxdoSwitch,
 			minEmailPrefix: settingRow.minEmailPrefix,
-			projectLink: settingRow.projectLink
+			projectLink: settingRow.projectLink,
 		};
 	},
 
-	async cleanupTempFiles(c, operatorInfo) {
+	async cleanupTempFiles(c, operatorInfo, isScheduled = false) {
 		const { tempFileCleanEnabled, tempFileCleanDays } = await this.query(c);
 
-		if (!tempFileCleanEnabled) {
+		if (isScheduled && !tempFileCleanEnabled) {
 			return { cleaned: 0, message: 'Auto cleanup is disabled' };
 		}
 
@@ -342,13 +332,13 @@ const settingService = {
 			action: 'temp_file_cleanup',
 			targetType: 'system',
 			targetDesc: 'Temp File Cleanup',
-			detail: { cleanedCount: toDelete.length, totalSize }
+			detail: { cleanedCount: toDelete.length, totalSize },
 		});
 
 		return {
 			cleaned: toDelete.length,
 			totalSize,
-			message: `Cleaned ${toDelete.length} temp files`
+			message: `Cleaned ${toDelete.length} temp files`,
 		};
 	},
 
@@ -368,34 +358,36 @@ const settingService = {
 			storageType,
 			count: fileCount,
 			totalSize,
-			prefix
+			prefix,
 		};
 	},
 
-	async cleanupRules(c, operatorInfo) {
-		const { ruleCleanDays } = await this.query(c);
+	async cleanupRules(c, operatorInfo, isScheduled = false) {
+		const { ruleCleanEnabled, ruleCleanDays } = await this.query(c);
+
+		if (isScheduled && !ruleCleanEnabled) {
+			return { cleaned: 0, filterCleaned: 0, forwardCleaned: 0, message: 'Auto rule cleanup is disabled' };
+		}
 
 		const expireDate = new Date();
 		expireDate.setDate(expireDate.getDate() - ruleCleanDays);
 		const expireDateStr = expireDate.toISOString().slice(0, 19).replace('T', ' ');
 
 		// 清理过期的过滤规则（软删除超过指定天数的）
-		const filterResult = await orm(c).delete(filterRule).where(
-			and(
-				eq(filterRule.isDel, 1),
-				lt(filterRule.createTime, expireDateStr)
-			)
-		).run();
+		const filterResult = await orm(c)
+			.delete(filterRule)
+			.where(and(eq(filterRule.isDel, 1), lt(filterRule.createTime, expireDateStr)))
+			.run();
 
 		// 清理过期的转发规则（软删除超过指定天数的）
-		const forwardResult = await orm(c).delete(forwardRule).where(
-			and(
-				eq(forwardRule.isDel, 1),
-				lt(forwardRule.createTime, expireDateStr)
-			)
-		).run();
+		const forwardResult = await orm(c)
+			.delete(forwardRule)
+			.where(and(eq(forwardRule.isDel, 1), lt(forwardRule.createTime, expireDateStr)))
+			.run();
 
-		const totalCleaned = (filterResult.rowCount || 0) + (forwardResult.rowCount || 0);
+		const filterCleaned = filterResult.meta?.changes || 0;
+		const forwardCleaned = forwardResult.meta?.changes || 0;
+		const totalCleaned = filterCleaned + forwardCleaned;
 
 		// 审计日志
 		await auditService.log(c, {
@@ -404,35 +396,42 @@ const settingService = {
 			action: 'rule_cleanup',
 			targetType: 'system',
 			targetDesc: 'Rule Cleanup',
-			detail: { filterCleaned: filterResult.rowCount || 0, forwardCleaned: forwardResult.rowCount || 0 }
+			detail: { filterCleaned, forwardCleaned },
 		});
 
 		return {
 			cleaned: totalCleaned,
-			filterCleaned: filterResult.rowCount || 0,
-			forwardCleaned: forwardResult.rowCount || 0,
-			message: `Cleaned ${filterResult.rowCount || 0} filter rules and ${forwardResult.rowCount || 0} forward rules`
+			filterCleaned,
+			forwardCleaned,
+			message: `Cleaned ${filterCleaned} filter rules and ${forwardCleaned} forward rules`,
 		};
 	},
 
 	async getRuleStats(c) {
+		const { ruleCleanDays } = await this.query(c);
 		const expireDate = new Date();
-		expireDate.setDate(expireDate.getDate() - 30);
+		expireDate.setDate(expireDate.getDate() - ruleCleanDays);
 		const expireDateStr = expireDate.toISOString().slice(0, 19).replace('T', ' ');
 
-		// 统计已删除超过30天的规则数量
-		const expiredFilterRules = await orm(c).select().from(filterRule)
-			.where(and(eq(filterRule.isDel, 1), lt(filterRule.createTime, expireDateStr))).all();
+		// 统计已软删除超过指定天数的规则数量
+		const expiredFilterRules = await orm(c)
+			.select()
+			.from(filterRule)
+			.where(and(eq(filterRule.isDel, 1), lt(filterRule.createTime, expireDateStr)))
+			.all();
 
-		const expiredForwardRules = await orm(c).select().from(forwardRule)
-			.where(and(eq(forwardRule.isDel, 1), lt(forwardRule.createTime, expireDateStr))).all();
+		const expiredForwardRules = await orm(c)
+			.select()
+			.from(forwardRule)
+			.where(and(eq(forwardRule.isDel, 1), lt(forwardRule.createTime, expireDateStr)))
+			.all();
 
 		return {
 			expiredFilterRules: expiredFilterRules.length,
 			expiredForwardRules: expiredForwardRules.length,
-			totalExpired: expiredFilterRules.length + expiredForwardRules.length
+			totalExpired: expiredFilterRules.length + expiredForwardRules.length,
 		};
-	}
+	},
 };
 
 export default settingService;
