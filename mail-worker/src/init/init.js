@@ -38,6 +38,7 @@ const dbInit = {
 		await this.v2_17DB(c);
 		await this.v2_18DB(c);
 		await this.v2_19DB(c);
+		await this.v2_20DB(c);
 		await settingService.refresh(c);
 		return c.text('success');
 	},
@@ -206,6 +207,59 @@ const dbInit = {
 			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN rule_clean_days INTEGER NOT NULL DEFAULT 30;`).run();
 		} catch (e) {
 			console.warn(`跳过字段：${e.message}`);
+		}
+	},
+
+	async v2_20DB(c) {
+		// 创建 TG 频道配置表
+		try {
+			await c.env.db.prepare(`
+				CREATE TABLE IF NOT EXISTS tg_channel (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					chat_id TEXT NOT NULL,
+					name TEXT NOT NULL DEFAULT '',
+					type INTEGER NOT NULL DEFAULT 0,
+					media_filter INTEGER NOT NULL DEFAULT 0,
+					max_size INTEGER NOT NULL DEFAULT 0,
+					archive_enabled INTEGER NOT NULL DEFAULT 0,
+					archive_days INTEGER NOT NULL DEFAULT 7,
+					enabled INTEGER NOT NULL DEFAULT 1,
+					priority INTEGER NOT NULL DEFAULT 0,
+					created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+				)
+			`).run();
+		} catch (e) {
+			console.warn(`跳过表创建：${e.message}`);
+		}
+
+		// 创建 TG 归档记录表
+		try {
+			await c.env.db.prepare(`
+				CREATE TABLE IF NOT EXISTS tg_archive (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					att_id INTEGER NOT NULL,
+					channel_id INTEGER NOT NULL,
+					tg_file_id TEXT NOT NULL,
+					tg_message_id INTEGER,
+					tg_file_unique_id TEXT,
+					archived_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+					cache_cleaned INTEGER NOT NULL DEFAULT 0
+				)
+			`).run();
+		} catch (e) {
+			console.warn(`跳过表创建：${e.message}`);
+		}
+
+		// 创建索引
+		try {
+			await c.env.db.prepare(`CREATE INDEX IF NOT EXISTS idx_tg_archive_att_id ON tg_archive(att_id);`).run();
+		} catch (e) {
+			console.warn(`跳过索引创建：${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`CREATE INDEX IF NOT EXISTS idx_tg_archive_channel_id ON tg_archive(channel_id);`).run();
+		} catch (e) {
+			console.warn(`跳过索引创建：${e.message}`);
 		}
 	},
 

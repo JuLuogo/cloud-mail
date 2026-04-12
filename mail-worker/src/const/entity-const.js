@@ -144,3 +144,21 @@ export const isDel = {
 	DELETE: 1,
 	NORMAL: 0
 }
+
+export const channelType = {
+	NOTIFICATION: 0,
+	ARCHIVE: 1,
+	HYBRID: 2,
+}
+
+export const mediaFilter = {
+	ALL: 0,
+	IMAGE_ONLY: 1,
+	DOCUMENT_ONLY: 2,
+}
+
+// TG Bot API 文件大小限制 (bytes)
+export const tgFileSizeLimit = {
+	UPLOAD: 50 * 1024 * 1024,
+	DOWNLOAD: 20 * 1024 * 1024,
+}

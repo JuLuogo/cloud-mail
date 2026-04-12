@@ -355,6 +355,15 @@
                 </div>
               </div>
               <div class="setting-item">
+                <div><span>{{ $t('tgChannelConfig') }}</span></div>
+                <div class="forward">
+                  <span>{{ tgChannels.length }} {{ $t('tgChannelList') }}</span>
+                  <el-button class="opt-button" size="small" type="primary" @click="openTgChannelConfig">
+                    <Icon icon="fluent:settings-48-regular" width="18" height="18"/>
+                  </el-button>
+                </div>
+              </div>
+              <div class="setting-item">
                 <div><span>{{ $t('otherEmail') }}</span></div>
                 <div class="forward">
                   <span>{{ setting.forwardStatus === 0 ? $t('enabled') : $t('disabled') }}</span>
@@ -863,6 +872,93 @@
           <el-button type="primary" :loading="settingLoading" @click="saveSesConfig">{{ $t('save') }}</el-button>
         </form>
       </el-dialog>
+      <!-- TG Channel Management Dialog -->
+      <el-dialog v-model="tgChannelConfigShow" :title="$t('tgChannelConfig')" width="600" top="5vh">
+        <div class="tg-channel-list">
+          <div v-if="tgChannels.length === 0" class="no-channels">{{ $t('noChannels') }}</div>
+          <div v-for="ch in tgChannels" :key="ch.id" class="tg-channel-item">
+            <div class="tg-channel-info">
+              <div class="tg-channel-header">
+                <span class="tg-channel-name">{{ ch.name || ch.chatId }}</span>
+                <el-tag size="small" :type="ch.type === 0 ? 'primary' : ch.type === 1 ? 'success' : 'warning'">
+                  {{ ch.type === 0 ? $t('channelTypeNotification') : ch.type === 1 ? $t('channelTypeArchive') : $t('channelTypeHybrid') }}
+                </el-tag>
+                <el-tag size="small" :type="ch.enabled === 1 ? 'success' : 'info'">
+                  {{ ch.enabled === 1 ? $t('enabled') : $t('disabled') }}
+                </el-tag>
+              </div>
+              <div class="tg-channel-detail">
+                <span>ID: {{ ch.chatId }}</span>
+                <span v-if="ch.mediaFilter === 1">{{ $t('mediaFilterImageOnly') }}</span>
+                <span v-else-if="ch.mediaFilter === 2">{{ $t('mediaFilterDocumentOnly') }}</span>
+                <span v-else>{{ $t('mediaFilterAll') }}</span>
+                <span v-if="ch.maxSize > 0">{{ ch.maxSize }}MB</span>
+                <span v-if="ch.archiveEnabled === 1">{{ ch.archiveDays === 0 ? $t('archiveDaysDesc') : ch.archiveDays + $t('archiveDaysDesc') }}</span>
+              </div>
+            </div>
+            <div class="tg-channel-actions">
+              <el-button size="small" type="success" @click="testTgChannelFn(ch.id)" :loading="testingChannelId === ch.id">{{ $t('testChannel') }}</el-button>
+              <el-button size="small" type="primary" @click="editTgChannel(ch)">{{ $t('edit') }}</el-button>
+              <el-button size="small" type="danger" @click="deleteTgChannelFn(ch.id)">{{ $t('delete') }}</el-button>
+            </div>
+          </div>
+        </div>
+        <template #footer>
+          <el-button type="primary" @click="addTgChannelFn">{{ $t('addChannel') }}</el-button>
+        </template>
+      </el-dialog>
+      <!-- TG Channel Edit Dialog -->
+      <el-dialog v-model="tgChannelEditShow" :title="tgChannelForm.id ? $t('editChannel') : $t('addChannel')" width="460">
+        <form class="tg-channel-form" @submit.prevent>
+          <div class="form-item">
+            <label>{{ $t('channelChatId') }}</label>
+            <el-input v-model="tgChannelForm.chatId" :placeholder="$t('channelChatIdDesc')"/>
+          </div>
+          <div class="form-item">
+            <label>{{ $t('channelName') }}</label>
+            <el-input v-model="tgChannelForm.name" :placeholder="$t('channelNameDesc')"/>
+          </div>
+          <div class="form-item">
+            <label>{{ $t('channelType') }}</label>
+            <el-radio-group v-model="tgChannelForm.type">
+              <el-radio :value="0">{{ $t('channelTypeNotification') }}</el-radio>
+              <el-radio :value="1">{{ $t('channelTypeArchive') }}</el-radio>
+              <el-radio :value="2">{{ $t('channelTypeHybrid') }}</el-radio>
+            </el-radio-group>
+          </div>
+          <div class="form-item">
+            <label>{{ $t('mediaFilter') }}</label>
+            <el-radio-group v-model="tgChannelForm.mediaFilter">
+              <el-radio :value="0">{{ $t('mediaFilterAll') }}</el-radio>
+              <el-radio :value="1">{{ $t('mediaFilterImageOnly') }}</el-radio>
+              <el-radio :value="2">{{ $t('mediaFilterDocumentOnly') }}</el-radio>
+            </el-radio-group>
+          </div>
+          <div class="form-item">
+            <label>{{ $t('maxFileSize') }}</label>
+            <el-input-number v-model="tgChannelForm.maxSize" :min="0" :max="50" :placeholder="$t('maxFileSizeDesc')"/>
+          </div>
+          <div class="form-item">
+            <label>{{ $t('channelPriority') }}</label>
+            <el-input-number v-model="tgChannelForm.priority" :min="0" :max="999"/>
+          </div>
+          <div class="form-item">
+            <el-checkbox v-model="tgChannelForm.archiveEnabledBool">{{ $t('archiveFeature') }}</el-checkbox>
+          </div>
+          <div class="form-item" v-if="tgChannelForm.archiveEnabledBool">
+            <label>{{ $t('archiveDays') }}</label>
+            <el-input-number v-model="tgChannelForm.archiveDays" :min="0" :max="365"/>
+            <span class="form-hint">{{ $t('archiveDaysDesc') }}</span>
+          </div>
+          <div class="form-item">
+            <el-checkbox v-model="tgChannelForm.enabledBool">{{ $t('channelEnabled') }}</el-checkbox>
+          </div>
+        </form>
+        <template #footer>
+          <el-button @click="tgChannelEditShow = false">{{ $t('cancel') }}</el-button>
+          <el-button type="primary" :loading="tgChannelSaving" @click="saveTgChannel">{{ $t('save') }}</el-button>
+        </template>
+      </el-dialog>
     </el-scrollbar>
   </div>
 </template>
@@ -870,6 +966,7 @@
 <script setup>
 import {computed, defineOptions, reactive, ref} from "vue";
 import {deleteBackground, setBackground, settingQuery, settingSet, cleanupTempFiles, tempFileStats, cleanupRules, ruleStats} from "@/request/setting.js";
+import {getTgChannels, addTgChannel, updateTgChannel, deleteTgChannel, testTgChannel} from "@/request/tg-channel.js";
 import {useSettingStore} from "@/store/setting.js";
 import {useUiStore} from "@/store/ui.js";
 import {useUserStore} from "@/store/user.js";
@@ -1007,6 +1104,26 @@ const ruleStatsData = ref({ totalExpired: 0, expiredFilterRules: 0, expiredForwa
 const ruleCleanupLoading = ref(false)
 const ruleCleanDays = ref(30)
 
+const tgChannels = ref([])
+const tgChannelConfigShow = ref(false)
+const tgChannelEditShow = ref(false)
+const tgChannelSaving = ref(false)
+const testingChannelId = ref(null)
+const tgChannelForm = reactive({
+  id: null,
+  chatId: '',
+  name: '',
+  type: 0,
+  mediaFilter: 0,
+  maxSize: 0,
+  archiveEnabled: 0,
+  archiveDays: 7,
+  enabled: 1,
+  priority: 0,
+  enabledBool: true,
+  archiveEnabledBool: false,
+})
+
 getSettings()
 getUpdate()
 
@@ -1030,6 +1147,7 @@ function getSettings() {
     resetEmailPrefix()
     loadTempFileStats()
     loadRuleStats()
+    loadTgChannels()
   })
 }
 
@@ -1117,6 +1235,115 @@ function saveRuleCleanDays() {
   editSetting({ ruleCleanDays: ruleCleanDays.value })
 }
 
+function loadTgChannels() {
+  getTgChannels().then(res => {
+    tgChannels.value = res.data || []
+  }).catch(() => {
+    tgChannels.value = []
+  })
+}
+
+function openTgChannelConfig() {
+  loadTgChannels()
+  tgChannelConfigShow.value = true
+}
+
+function resetTgChannelForm() {
+  tgChannelForm.id = null
+  tgChannelForm.chatId = ''
+  tgChannelForm.name = ''
+  tgChannelForm.type = 0
+  tgChannelForm.mediaFilter = 0
+  tgChannelForm.maxSize = 0
+  tgChannelForm.archiveEnabled = 0
+  tgChannelForm.archiveDays = 7
+  tgChannelForm.enabled = 1
+  tgChannelForm.priority = 0
+  tgChannelForm.enabledBool = true
+  tgChannelForm.archiveEnabledBool = false
+}
+
+function addTgChannelFn() {
+  resetTgChannelForm()
+  tgChannelEditShow.value = true
+}
+
+function editTgChannel(ch) {
+  tgChannelForm.id = ch.id
+  tgChannelForm.chatId = ch.chatId
+  tgChannelForm.name = ch.name
+  tgChannelForm.type = ch.type
+  tgChannelForm.mediaFilter = ch.mediaFilter
+  tgChannelForm.maxSize = ch.maxSize
+  tgChannelForm.archiveEnabled = ch.archiveEnabled
+  tgChannelForm.archiveDays = ch.archiveDays
+  tgChannelForm.enabled = ch.enabled
+  tgChannelForm.priority = ch.priority
+  tgChannelForm.enabledBool = ch.enabled === 1
+  tgChannelForm.archiveEnabledBool = ch.archiveEnabled === 1
+  tgChannelEditShow.value = true
+}
+
+function saveTgChannel() {
+  if (!tgChannelForm.chatId.trim()) {
+    ElMessage({ message: t('channelChatIdRequired'), type: 'warning', plain: true })
+    return
+  }
+  if (tgChannelForm.maxSize > 50) {
+    ElMessage({ message: t('maxSizeExceeded'), type: 'warning', plain: true })
+    return
+  }
+  tgChannelSaving.value = true
+  const data = {
+    chatId: tgChannelForm.chatId.trim(),
+    name: tgChannelForm.name.trim(),
+    type: tgChannelForm.type,
+    mediaFilter: tgChannelForm.mediaFilter,
+    maxSize: tgChannelForm.maxSize,
+    archiveEnabled: tgChannelForm.archiveEnabledBool ? 1 : 0,
+    archiveDays: tgChannelForm.archiveDays,
+    enabled: tgChannelForm.enabledBool ? 1 : 0,
+    priority: tgChannelForm.priority,
+  }
+  const promise = tgChannelForm.id
+    ? updateTgChannel(tgChannelForm.id, data)
+    : addTgChannel(data)
+  promise.then(() => {
+    ElMessage({ message: t('saveSuccessMsg'), type: 'success', plain: true })
+    tgChannelEditShow.value = false
+    loadTgChannels()
+  }).catch(() => {
+    ElMessage({ message: t('saveFailedMsg'), type: 'error', plain: true })
+  }).finally(() => {
+    tgChannelSaving.value = false
+  })
+}
+
+function deleteTgChannelFn(id) {
+  ElMessageBox.confirm(t('deleteChannelConfirm'), {
+    confirmButtonText: t('confirm'),
+    cancelButtonText: t('cancel'),
+    type: 'warning'
+  }).then(() => {
+    deleteTgChannel(id).then(() => {
+      ElMessage({ message: t('delSuccessMsg'), type: 'success', plain: true })
+      loadTgChannels()
+    }).catch(() => {
+      ElMessage({ message: t('saveFailedMsg'), type: 'error', plain: true })
+    })
+  })
+}
+
+function testTgChannelFn(id) {
+  testingChannelId.value = id
+  testTgChannel(id).then(() => {
+    ElMessage({ message: t('testChannelSuccess'), type: 'success', plain: true })
+  }).catch(() => {
+    ElMessage({ message: t('testChannelFailed'), type: 'error', plain: true })
+  }).finally(() => {
+    testingChannelId.value = null
+  })
+}
 
 function openNoticePopup() {
   uiStore.showNotice()
@@ -2152,6 +2379,92 @@ form .el-button {
 
 :deep(.el-select__wrapper) {
   min-height: 28px;
+}
+
+.tg-channel-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.no-channels {
+  text-align: center;
+  color: #999;
+  padding: 20px 0;
+}
+
+.tg-channel-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+  margin-bottom: 8px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.tg-channel-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tg-channel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tg-channel-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.tg-channel-detail {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.tg-channel-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+
+.tg-channel-form {
+  .form-item {
+    margin-bottom: 14px;
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+      color: var(--el-text-color-regular);
+    }
+
+    .el-radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+  }
+
+  .form-hint {
+    font-size: 12px;
+    color: #999;
+    margin-left: 8px;
+  }
 }
 
 </style>

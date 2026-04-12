@@ -7,6 +7,7 @@ import kvObjService from './service/kv-obj-service';
 import oauthService from './service/oauth-service';
 import queueService from './service/queue-service';
 import settingService from './service/setting-service';
+import tgArchiveService from './service/tg-archive-service';
 export default {
 	async fetch(req, env, ctx) {
 		const url = new URL(req.url);
@@ -30,6 +31,7 @@ export default {
 			oauthService.clearNoBindOathUser(scheduledContext),
 			settingService.cleanupTempFiles(scheduledContext, systemOperator, true),
 			settingService.cleanupRules(scheduledContext, systemOperator, true),
+			tgArchiveService.cleanupExpiredCache(scheduledContext),
 		]);
 
 		for (const result of results) {

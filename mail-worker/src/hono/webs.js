@@ -25,4 +25,5 @@ import '../api/filter-api'
 import '../api/2fa-api'
 import '../api/forward-rule-api'
 import '../api/kv-api'
+import '../api/tg-channel-api'
 export default app;

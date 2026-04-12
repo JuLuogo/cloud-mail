@@ -15,7 +15,9 @@ import emailHtmlTemplate from '../template/email-html';
 import verifyUtils from '../utils/verify-utils';
 import domainUtils from "../utils/domain-uitls";
 import r2Service from './r2-service';
-import { attConst } from '../const/entity-const';
+import { attConst, channelType } from '../const/entity-const';
+import tgChannelService from './tg-channel-service';
+import tgArchiveService from './tg-archive-service';
 
 const telegramService = {
 
@@ -46,21 +48,21 @@ const telegramService = {
 
 	},
 
-	async sendEmailToBot(c, email) {
+	async sendEmailToBot(c, emailRow) {
 
 		const { tgBotToken, tgChatId, customDomain, tgMsgTo, tgMsgFrom, tgMsgText } = await settingService.query(c);
 
-		const tgChatIds = tgChatId.split(',');
+		if (!tgBotToken) return;
 
-		const jwtToken = await jwtUtils.generateToken(c, { emailId: email.emailId })
+		const jwtToken = await jwtUtils.generateToken(c, { emailId: emailRow.emailId })
 
 		const webAppUrl = customDomain ? `${domainUtils.toOssDomain(customDomain)}/api/telegram/getEmail/${jwtToken}` : 'https://www.cloudflare.com/404'
 
 		// 查询邮件附件（普通附件 contentId 为空，内嵌图片 contentId 不为空）
 		const attachments = await orm(c).select().from(attEntity).where(
 			and(
-				eq(attEntity.emailId, email.emailId),
-				eq(attEntity.userId, email.userId),
+				eq(attEntity.emailId, emailRow.emailId),
+				eq(attEntity.userId, emailRow.userId),
 				eq(attEntity.type, attConst.type.ATT)
 			)
 		).all();
@@ -70,25 +72,129 @@ const telegramService = {
 		const inlineImages = attachments.filter(att => att.contentId);
 
 		// 构建消息文字
-		const messageText = emailMsgTemplate(email, tgMsgTo, tgMsgFrom, tgMsgText, regularAttachments, inlineImages);
+		const messageText = emailMsgTemplate(emailRow, tgMsgTo, tgMsgFrom, tgMsgText, regularAttachments, inlineImages);
+
+		// 合并所有附件：内嵌图片优先，然后是普通附件
+		const allAttachments = [...inlineImages, ...regularAttachments];
+
+		// 获取多频道配置
+		let channels = [];
+		try {
+			channels = await tgChannelService.getEnabledChannels(c);
+		} catch (e) {
+			// tg_channel 表可能还不存在（未迁移），忽略错误
+			console.warn('[TG] tg_channel 表查询失败，使用旧版 tgChatId:', e.message);
+		}
+
+		if (channels.length > 0) {
+			// 多频道模式
+			await this.sendToMultiChannels(c, tgBotToken, channels, allAttachments, messageText, webAppUrl);
+		} else if (tgChatId) {
+			// 向后兼容：使用旧的 tgChatId 配置
+			await this.sendToLegacyChatIds(c, tgBotToken, tgChatId, allAttachments, messageText, webAppUrl);
+		}
+	},
+
+	/**
+	 * 多频道分发模式
+	 */
+	async sendToMultiChannels(c, tgBotToken, channels, allAttachments, messageText, webAppUrl) {
+		for (const channel of channels) {
+			try {
+				if (allAttachments.length > 0) {
+					// 过滤出匹配此频道规则的附件
+					const matchedAtts = allAttachments.filter(att => tgChannelService.matchChannel(channel, att));
+
+					if (matchedAtts.length > 0) {
+						// 发送匹配的附件到此频道
+						const results = await this.sendMediaGroup(c, tgBotToken, channel.chatId, matchedAtts, messageText, webAppUrl);
+
+						// 如果是归档/混合频道，记录归档信息
+						if (channel.type === channelType.ARCHIVE || channel.type === channelType.HYBRID) {
+							await this.recordArchiveResults(c, channel, matchedAtts, results);
+						}
+					} else if (channel.type === channelType.NOTIFICATION || channel.type === channelType.HYBRID) {
+						// 没有匹配的附件，但通知/混合频道仍发送文本消息
+						await this.sendTextMessage(tgBotToken, channel.chatId, messageText, webAppUrl);
+					}
+				} else {
+					// 无附件：通知/混合频道发送文本
+					if (channel.type !== channelType.ARCHIVE) {
+						await this.sendTextMessage(tgBotToken, channel.chatId, messageText, webAppUrl);
+					}
+				}
+			} catch (e) {
+				console.error(`[TG] 频道 ${channel.name || channel.chatId} 发送失败:`, e.message);
+			}
+		}
+	},
+
+	/**
+	 * 记录归档结果（从 sendMediaGroup 返回的 TG file_id 信息）
+	 */
+	async recordArchiveResults(c, channel, attachments, results) {
+		if (!results || results.length === 0) return;
+
+		// 建立附件 attId 列表，与 TG 返回消息按顺序对应
+		let attIndex = 0;
+		for (const msgResult of results) {
+			if (!msgResult || !msgResult.result) continue;
+
+			const messages = Array.isArray(msgResult.result) ? msgResult.result : [msgResult.result];
+			for (const msg of messages) {
+				const fileInfo = this.extractFileInfo(msg);
+				if (fileInfo && attIndex < attachments.length) {
+					try {
+						await tgArchiveService.recordArchive(c, attachments[attIndex].attId, channel.id, {
+							file_id: fileInfo.file_id,
+							message_id: msg.message_id,
+							file_unique_id: fileInfo.file_unique_id,
+						});
+					} catch (e) {
+						console.error(`[TG Archive] 记录归档失败:`, e.message);
+					}
+				}
+				attIndex++;
+			}
+		}
+	},
+
+	/**
+	 * 从 TG 消息中提取文件信息
+	 */
+	extractFileInfo(msg) {
+		const mediaTypes = ['document', 'photo', 'video', 'audio', 'voice', 'animation'];
+		for (const type of mediaTypes) {
+			if (msg[type]) {
+				const media = type === 'photo'
+					? msg[type][msg[type].length - 1] // photo 返回多个尺寸，取最大的
+					: msg[type];
+				return {
+					file_id: media.file_id,
+					file_unique_id: media.file_unique_id,
+				};
+			}
+		}
+		return null;
+	},
+
+	/**
+	 * 向后兼容：使用旧的 tgChatId 配置发送
+	 */
+	async sendToLegacyChatIds(c, tgBotToken, tgChatId, allAttachments, messageText, webAppUrl) {
+		const tgChatIds = tgChatId.split(',');
 
 		await Promise.all(tgChatIds.map(async chatId => {
 			try {
-				// 合并所有附件：内嵌图片优先，然后是普通附件
-				const allAttachments = [...inlineImages, ...regularAttachments];
-
 				if (allAttachments.length > 0) {
-					// 使用 sendMediaGroup 发送媒体组（多条图片/文件在一条消息中）
 					await this.sendMediaGroup(c, tgBotToken, chatId, allAttachments, messageText, webAppUrl);
 				} else {
-					// 无附件时，只发送文本消息
 					await this.sendTextMessage(tgBotToken, chatId, messageText, webAppUrl);
 				}
 			} catch (e) {
 				console.error(`转发 Telegram 失败:`, e.message);
 			}
 		}));
-
 	},
 
 	/**
@@ -124,9 +230,11 @@ const telegramService = {
 	/**
 	 * 发送媒体组（多张图片/文件 + 文字 caption）在同一条消息中
 	 * Telegram 的 sendMediaGroup 最多支持 10 个媒体项目
+	 * 返回 TG API 的响应数组（用于归档记录 file_id）
 	 */
 	async sendMediaGroup(c, tgBotToken, chatId, attachments, caption, webAppUrl) {
 		const MAX_MEDIA_PER_GROUP = 10;
+		const results = [];
 
 		// 将附件分批，每批最多 10 个
 		const batches = [];
@@ -149,21 +257,18 @@ const telegramService = {
 				const mediaItem = {
 					type: inputType,
 					media: `attach://${att.key}`,
-					caption: isFirstBatch && i === 0 ? caption : undefined,
 					parse_mode: 'HTML'
 				};
 
 				// 只有第一张图片/文件的 caption 会生效
 				if (isFirstBatch && i === 0) {
 					mediaItem.caption = caption;
-				} else {
-					delete mediaItem.caption;
 				}
 
 				media.push(mediaItem);
 			}
 
-			// 如果不是最后一批，添加查看按钮
+			// 最后一批添加查看按钮
 			let replyMarkup = undefined;
 			if (isLastBatch && webAppUrl) {
 				replyMarkup = {
@@ -206,9 +311,13 @@ const telegramService = {
 			if (!res.ok) {
 				console.error(`发送媒体组失败 status: ${res.status} response: ${await res.text()}`);
 			} else {
+				const resData = await res.json();
+				results.push(resData);
 				console.log(`媒体组发送成功，共 ${batch.length} 个项目`);
 			}
 		}
+
+		return results;
 	},
 
 	/**
