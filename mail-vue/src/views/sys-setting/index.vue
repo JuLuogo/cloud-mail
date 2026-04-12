@@ -287,7 +287,7 @@
                   </el-tooltip>
                 </div>
                 <div class="r2domain">
-                  <el-input-number size="small" v-model="tempFileCleanDays" @change="saveTempFileCleanDays" :min="1" :max="365" :disabled="setting.tempFileCleanEnabled !== 1"/>
+                  <el-input-number size="small" v-model="tempFileCleanDays" @change="saveTempFileCleanDays" :min="1" :max="365"/>
                 </div>
               </div>
               <div class="setting-item">
@@ -324,7 +324,7 @@
                   </el-tooltip>
                 </div>
                 <div class="r2domain">
-                  <el-input-number size="small" v-model="ruleCleanDays" @change="saveRuleCleanDays" :min="1" :max="365" :disabled="setting.ruleCleanEnabled !== 1"/>
+                  <el-input-number size="small" v-model="ruleCleanDays" @change="saveRuleCleanDays" :min="1" :max="365"/>
                 </div>
               </div>
               <div class="setting-item">
