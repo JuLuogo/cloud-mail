@@ -12,7 +12,10 @@ import auditService from './audit-service';
 import { auditConst } from '../entity/audit-log';
 import { filterRule } from '../entity/filter-rule';
 import { forwardRule } from '../entity/forward-rule';
-import { lt, eq, and } from 'drizzle-orm';
+import { email } from '../entity/email';
+import { att } from '../entity/att';
+import { isDel } from '../const/entity-const';
+import { lt, eq, and, inArray, sql, sum, count } from 'drizzle-orm';
 
 const settingService = {
 	async refresh(c) {
@@ -290,39 +293,101 @@ const settingService = {
 			return { cleaned: 0, message: 'Auto cleanup is disabled' };
 		}
 
+		let queueCleaned = 0;
+		let attCleaned = 0;
+		let totalSize = 0;
+
+		// 1. 清理队列临时文件 (email-queue-att/)
 		const prefix = constant.EMAIL_QUEUE_ATT_PREFIX;
 		const objects = await r2Service.listObjects(c, prefix);
 
-		if (objects.length === 0) {
-			return { cleaned: 0, message: 'No temp files found' };
-		}
+		if (objects.length > 0) {
+			const now = Date.now();
+			const expireTime = tempFileCleanDays * 24 * 60 * 60 * 1000;
+			const expireDate = new Date(now - expireTime);
 
-		const now = Date.now();
-		const expireTime = tempFileCleanDays * 24 * 60 * 60 * 1000;
-		const expireDate = new Date(now - expireTime);
+			const toDelete = [];
 
-		const toDelete = [];
-		let totalSize = 0;
+			for (const obj of objects) {
+				const uploaded = obj.uploaded || obj.LastModified;
+				if (uploaded && new Date(uploaded) < expireDate) {
+					toDelete.push(obj.key);
+					totalSize += obj.size || 0;
+				}
+			}
 
-		for (const obj of objects) {
-			// R2 objects have uploaded and key properties
-			// S3 objects have LastModified and Key properties
-			const uploaded = obj.uploaded || obj.LastModified;
-			if (uploaded && new Date(uploaded) < expireDate) {
-				toDelete.push(obj.key);
-				totalSize += obj.size || 0;
+			if (toDelete.length > 0) {
+				const batchSize = 1000;
+				for (let i = 0; i < toDelete.length; i += batchSize) {
+					const batch = toDelete.slice(i, i + batchSize);
+					await r2Service.delete(c, batch);
+				}
+				queueCleaned = toDelete.length;
 			}
 		}
 
-		if (toDelete.length === 0) {
-			return { cleaned: 0, message: 'No expired temp files found' };
+		// 2. 清理已删除邮件的附件
+		const expireDate = new Date();
+		expireDate.setDate(expireDate.getDate() - tempFileCleanDays);
+		const expireDateStr = expireDate.toISOString().slice(0, 19).replace('T', ' ');
+
+		// 查找已删除且超过清理天数的邮件ID
+		const deletedEmails = await orm(c)
+			.select({ emailId: email.emailId })
+			.from(email)
+			.where(and(eq(email.isDel, isDel.DELETE), lt(email.createTime, expireDateStr)))
+			.all();
+
+		if (deletedEmails.length > 0) {
+			const emailIds = deletedEmails.map((e) => e.emailId);
+
+			// 统计要删除的附件大小
+			const attStats = await orm(c)
+				.select({ attSize: sum(att.size), attCount: count(att.attId) })
+				.from(att)
+				.where(inArray(att.emailId, emailIds))
+				.get();
+
+			totalSize += Number(attStats?.attSize) || 0;
+			attCleaned = attStats?.attCount || 0;
+
+			// 删除附件：先查出仅被这些邮件引用的附件key，再从存储中删除，最后删数据库记录
+			// 使用与 att-service.removeAttByField 相同的逻辑：只删除引用计数为1的key的存储文件
+			const sqlList = [];
+			for (const emailId of emailIds) {
+				sqlList.push(
+					c.env.db
+						.prepare(
+							`SELECT a.key, a.att_id
+							FROM attachments a
+							JOIN (SELECT key FROM attachments GROUP BY key HAVING COUNT(*) = 1) t
+							ON a.key = t.key
+							WHERE a.email_id = ?;`,
+						)
+						.bind(emailId),
+				);
+				sqlList.push(c.env.db.prepare(`DELETE FROM attachments WHERE email_id = ?`).bind(emailId));
+			}
+
+			const attListResult = await c.env.db.batch(sqlList);
+			const delKeyList = attListResult.flatMap((r) => (r.results ? r.results.map((row) => row.key) : []));
+
+			if (delKeyList.length > 0) {
+				const BATCH_SIZE = 1000;
+				for (let i = 0; i < delKeyList.length; i += BATCH_SIZE) {
+					const batch = delKeyList.slice(i, i + BATCH_SIZE);
+					await r2Service.delete(c, batch);
+				}
+			}
+
+			// 物理删除邮件记录
+			await orm(c).delete(email).where(inArray(email.emailId, emailIds)).run();
 		}
 
-		// Delete in batches of 1000
-		const batchSize = 1000;
-		for (let i = 0; i < toDelete.length; i += batchSize) {
-			const batch = toDelete.slice(i, i + batchSize);
-			await r2Service.delete(c, batch);
+		const totalCleaned = queueCleaned + attCleaned;
+
+		if (totalCleaned === 0) {
+			return { cleaned: 0, message: 'No expired files found' };
 		}
 
 		// Audit log
@@ -332,33 +397,56 @@ const settingService = {
 			action: 'temp_file_cleanup',
 			targetType: 'system',
 			targetDesc: 'Temp File Cleanup',
-			detail: { cleanedCount: toDelete.length, totalSize },
+			detail: { queueCleaned, attCleaned, deletedEmails: deletedEmails?.length || 0, totalSize },
 		});
 
 		return {
-			cleaned: toDelete.length,
+			cleaned: totalCleaned,
+			queueCleaned,
+			attCleaned,
+			deletedEmails: deletedEmails?.length || 0,
 			totalSize,
-			message: `Cleaned ${toDelete.length} temp files`,
+			message: `Cleaned ${queueCleaned} queue files and ${attCleaned} attachments from ${deletedEmails?.length || 0} deleted emails`,
 		};
 	},
 
 	async getTempFileStats(c) {
 		const storageType = await r2Service.storageType(c);
+		const { tempFileCleanDays } = await this.query(c);
+
+		// 1. 统计队列临时文件 (email-queue-att/)
 		const prefix = constant.EMAIL_QUEUE_ATT_PREFIX;
 		const objects = await r2Service.listObjects(c, prefix);
 
-		let totalSize = 0;
-		let fileCount = objects.length;
-
+		let queueFileSize = 0;
 		for (const obj of objects) {
-			totalSize += obj.size || 0;
+			queueFileSize += obj.size || 0;
 		}
+
+		// 2. 统计已删除邮件的附件
+		const expireDate = new Date();
+		expireDate.setDate(expireDate.getDate() - tempFileCleanDays);
+		const expireDateStr = expireDate.toISOString().slice(0, 19).replace('T', ' ');
+
+		const deletedEmailAtts = await orm(c)
+			.select({
+				attCount: count(att.attId),
+				attSize: sum(att.size),
+			})
+			.from(att)
+			.innerJoin(email, eq(att.emailId, email.emailId))
+			.where(and(eq(email.isDel, isDel.DELETE), lt(email.createTime, expireDateStr)))
+			.get();
+
+		const deletedAttCount = deletedEmailAtts?.attCount || 0;
+		const deletedAttSize = Number(deletedEmailAtts?.attSize) || 0;
 
 		return {
 			storageType,
-			count: fileCount,
-			totalSize,
-			prefix,
+			count: objects.length + deletedAttCount,
+			totalSize: queueFileSize + deletedAttSize,
+			queueTempFiles: objects.length,
+			deletedEmailAtts: deletedAttCount,
 		};
 	},
 
