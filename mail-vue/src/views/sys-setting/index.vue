@@ -346,15 +346,6 @@
             <div class="card-title">{{ $t('emailPush') }}</div>
             <div class="card-content">
               <div class="setting-item">
-                <div><span>{{ $t('tgBot') }}</span></div>
-                <div class="forward">
-                  <span>{{ setting.tgBotStatus === 0 ? $t('enabled') : $t('disabled') }}</span>
-                  <el-button class="opt-button" size="small" type="primary" @click="openTgSetting">
-                    <Icon icon="fluent:settings-48-regular" width="18" height="18"/>
-                  </el-button>
-                </div>
-              </div>
-              <div class="setting-item">
                 <div><span>{{ $t('tgChannelConfig') }}</span></div>
                 <div class="forward">
                   <span>{{ tgChannels.length }} {{ $t('tgChannelList') }}</span>
@@ -597,67 +588,6 @@
         </div>
       </el-dialog>
       <el-dialog
-          v-model="tgSettingShow"
-          class="forward-dialog"
-      >
-        <template #header>
-          <div class="forward-head">
-            <span class="forward-set-title">{{ $t('tgBot') }}</span>
-            <el-tooltip effect="dark" :content="$t('tgBotDesc')">
-              <Icon class="warning" icon="fe:warning" width="18" height="18"/>
-            </el-tooltip>
-          </div>
-        </template>
-        <div class="forward-set-body">
-          <el-input :placeholder="$t('tgBotToken')" v-model="tgBotToken"></el-input>
-          <el-input-tag tag-type="warning" :placeholder="$t('toBotTokenDesc')" v-model="tgChatId"
-                        @add-tag="addChatTag"></el-input-tag>
-          <el-input tag-type="warning" :placeholder="$t('customDomainDesc')" v-model="customDomain" ></el-input>
-          <div class="tg-msg-label">
-            <span>{{t('from')}}</span>
-            <el-select  v-model="tgMsgFrom" >
-              <el-option
-                  v-for="item in tgMsgFromOption"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-              />
-            </el-select>
-          </div>
-          <div class="tg-msg-label">
-            <span>{{t('recipient')}}</span>
-            <el-select  v-model="tgMsgTo" >
-              <el-option
-                  v-for="item in tgMsgToOption"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-              />
-            </el-select>
-          </div>
-          <div class="tg-msg-label">
-            <span>{{t('emailText')}}</span>
-            <el-select  v-model="tgMsgText" >
-              <el-option
-                  v-for="item in tgMsgTextOption"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-              />
-            </el-select>
-          </div>
-        </div>
-        <template #footer>
-          <div class="dialog-footer">
-            <el-switch v-model="tgBotStatus" :active-value="0" :inactive-value="1" :active-text="$t('enable')"
-                       :inactive-text="$t('disable')"/>
-            <el-button :loading="settingLoading" type="primary" @click="tgBotSave">
-              {{ $t('save') }}
-            </el-button>
-          </div>
-        </template>
-      </el-dialog>
-      <el-dialog
           v-model="thirdEmailShow"
           class="forward-dialog"
       >
@@ -874,6 +804,52 @@
       </el-dialog>
       <!-- TG Channel Management Dialog -->
       <el-dialog v-model="tgChannelConfigShow" :title="$t('tgChannelConfig')" width="600" top="5vh">
+        <!-- Bot Basic Config -->
+        <div class="tg-bot-config">
+          <div class="tg-bot-config-header">
+            <span>{{ $t('tgBot') }}</span>
+            <el-switch v-model="tgBotStatus" :active-value="0" :inactive-value="1" :active-text="$t('enable')"
+                       :inactive-text="$t('disable')"/>
+          </div>
+          <div class="tg-bot-config-body">
+            <el-input :placeholder="$t('tgBotToken')" v-model="tgBotToken"></el-input>
+            <el-input tag-type="warning" :placeholder="$t('customDomainDesc')" v-model="customDomain"></el-input>
+            <div class="tg-msg-label">
+              <span>{{t('from')}}</span>
+              <el-select v-model="tgMsgFrom">
+                <el-option
+                    v-for="item in tgMsgFromOption"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                />
+              </el-select>
+            </div>
+            <div class="tg-msg-label">
+              <span>{{t('recipient')}}</span>
+              <el-select v-model="tgMsgTo">
+                <el-option
+                    v-for="item in tgMsgToOption"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                />
+              </el-select>
+            </div>
+            <div class="tg-msg-label">
+              <span>{{t('emailText')}}</span>
+              <el-select v-model="tgMsgText">
+                <el-option
+                    v-for="item in tgMsgTextOption"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value"
+                />
+              </el-select>
+            </div>
+          </div>
+        </div>
+        <el-divider />
         <div class="tg-channel-list">
           <div v-if="tgChannels.length === 0" class="no-channels">{{ $t('noChannels') }}</div>
           <div v-for="ch in tgChannels" :key="ch.id" class="tg-channel-item">
@@ -904,7 +880,10 @@
           </div>
         </div>
         <template #footer>
-          <el-button type="primary" @click="addTgChannelFn">{{ $t('addChannel') }}</el-button>
+          <div class="tg-channel-config-footer">
+            <el-button type="primary" @click="tgBotSave">{{ $t('save') }} Bot</el-button>
+            <el-button type="primary" @click="addTgChannelFn">{{ $t('addChannel') }}</el-button>
+          </div>
         </template>
       </el-dialog>
       <!-- TG Channel Edit Dialog -->
@@ -1050,7 +1029,6 @@ const editTitleShow = ref(false)
 const resendTokenFormShow = ref(false)
 const r2DomainShow = ref(false)
 const turnstileShow = ref(false)
-const tgSettingShow = ref(false)
 const noticePopupShow = ref(false)
 const thirdEmailShow = ref(false)
 const forwardRulesShow = ref(false)
@@ -1129,7 +1107,6 @@ const authRefreshOptions = computed(() => [
   {label: '20s', value: 20},
 ])
 
-const tgChatId = ref([])
 const customDomain = ref('')
 const tgBotStatus = ref(0)
 const tgBotToken = ref('')
@@ -1318,6 +1295,14 @@ function loadTgChannels() {
 }
 
 function openTgChannelConfig() {
+  // 加载 Bot 基础配置
+  tgBotStatus.value = setting.value.tgBotStatus
+  tgBotToken.value = setting.value.tgBotToken
+  customDomain.value = setting.value.customDomain
+  tgMsgFrom.value = setting.value.tgMsgFrom
+  tgMsgText.value = setting.value.tgMsgText
+  tgMsgTo.value = setting.value.tgMsgTo
+  // 加载频道列表
   loadTgChannels()
   tgChannelConfigShow.value = true
 }
@@ -1552,21 +1537,6 @@ function closedSetBackground() {
   backgroundUrl.value = setting.value.background?.startsWith('http') ? setting.value.background : ''
 }
 
-function openTgSetting() {
-  tgBotStatus.value = setting.value.tgBotStatus
-  tgBotToken.value = setting.value.tgBotToken
-  customDomain.value = setting.value.customDomain
-  tgMsgFrom.value = setting.value.tgMsgFrom
-  tgMsgText.value = setting.value.tgMsgText
-  tgMsgTo.value = setting.value.tgMsgTo
-  tgChatId.value = []
-  if (setting.value.tgChatId) {
-    const list = setting.value.tgChatId.split(',')
-    tgChatId.value.push(...list)
-  }
-  tgSettingShow.value = true
-}
-
 function openNoticePopupSetting() {
   noticePopupShow.value = true
 }
@@ -1653,21 +1623,6 @@ function ruleEmailAddTag(val) {
   })
 }
 
-function addChatTag(val) {
-
-  const chatIds = Array.from(new Set(
-      val.split(/[,，]/).map(item => item.trim()).filter(item => item)
-  ));
-
-  tgChatId.value.splice(tgChatId.value.length - 1, 1)
-
-  chatIds.forEach(id => {
-    if (!isNaN(Number(id))) {
-      tgChatId.value.push(id)
-    }
-  })
-}
-
 function clearS3() {
 
   const form = {
@@ -1702,7 +1657,6 @@ function tgBotSave() {
     tgBotToken: tgBotToken.value,
     customDomain: customDomain.value,
     tgBotStatus: tgBotStatus.value,
-    tgChatId: tgChatId.value + '',
     tgMsgFrom: tgMsgFrom.value,
     tgMsgText: tgMsgText.value,
     tgMsgTo: tgMsgTo.value
@@ -1950,7 +1904,6 @@ function editSetting(settingForm, refreshStatus = true) {
     r2DomainShow.value = false
     resendTokenFormShow.value = false
     turnstileShow.value = false
-    tgSettingShow.value = false
     thirdEmailShow.value = false
     forwardRulesShow.value = false
     addVerifyCountShow.value = false
@@ -2517,6 +2470,40 @@ form .el-button {
   gap: 4px;
   flex-shrink: 0;
   margin-left: 10px;
+}
+
+.tg-bot-config {
+  margin-bottom: 15px;
+
+  .tg-bot-config-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+
+  .tg-bot-config-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    .tg-msg-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .el-select {
+        width: 120px;
+      }
+    }
+  }
+}
+
+.tg-channel-config-footer {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .tg-channel-form {
