@@ -107,7 +107,7 @@ const telegramService = {
 
 					if (matchedAtts.length > 0) {
 						// 发送匹配的附件到此频道
-						const results = await this.sendMediaGroup(c, tgBotToken, channel.chatId, matchedAtts, messageText, webAppUrl);
+						const results = await this.sendMediaGroup(c, tgBotToken, channel.chatId, channel.threadId, matchedAtts, messageText, webAppUrl);
 
 						// 如果是归档/混合频道，记录归档信息
 						if (channel.type === channelType.ARCHIVE || channel.type === channelType.HYBRID) {
@@ -115,12 +115,12 @@ const telegramService = {
 						}
 					} else if (channel.type === channelType.NOTIFICATION || channel.type === channelType.HYBRID) {
 						// 没有匹配的附件，但通知/混合频道仍发送文本消息
-						await this.sendTextMessage(tgBotToken, channel.chatId, messageText, webAppUrl);
+						await this.sendTextMessage(tgBotToken, channel.chatId, channel.threadId, messageText, webAppUrl);
 					}
 				} else {
 					// 无附件：通知/混合频道发送文本
 					if (channel.type !== channelType.ARCHIVE) {
-						await this.sendTextMessage(tgBotToken, channel.chatId, messageText, webAppUrl);
+						await this.sendTextMessage(tgBotToken, channel.chatId, channel.threadId, messageText, webAppUrl);
 					}
 				}
 			} catch (e) {
@@ -195,9 +195,9 @@ const telegramService = {
 		await Promise.all(tgChatIds.map(async chatId => {
 			try {
 				if (allAttachments.length > 0) {
-					await this.sendMediaGroup(c, tgBotToken, chatId, allAttachments, messageText, webAppUrl);
+					await this.sendMediaGroup(c, tgBotToken, chatId, 0, allAttachments, messageText, webAppUrl);
 				} else {
-					await this.sendTextMessage(tgBotToken, chatId, messageText, webAppUrl);
+					await this.sendTextMessage(tgBotToken, chatId, 0, messageText, webAppUrl);
 				}
 			} catch (e) {
 				console.error(`转发 Telegram 失败:`, e.message);
@@ -208,27 +208,32 @@ const telegramService = {
 	/**
 	 * 发送文本消息到 Telegram
 	 */
-	async sendTextMessage(tgBotToken, chatId, text, webAppUrl) {
+	async sendTextMessage(tgBotToken, chatId, threadId, text, webAppUrl) {
+		const body = {
+			chat_id: chatId,
+			parse_mode: 'HTML',
+			text,
+			reply_markup: {
+				inline_keyboard: [
+					[
+						{
+							text: '查看',
+							web_app: { url: webAppUrl }
+						}
+					]
+				]
+			}
+		};
+		// 如果设置了话题ID，添加到请求中
+		if (threadId && threadId > 0) {
+			body.message_thread_id = threadId;
+		}
 		const res = await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMessage`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({
-				chat_id: chatId,
-				parse_mode: 'HTML',
-				text,
-				reply_markup: {
-					inline_keyboard: [
-						[
-							{
-								text: '查看',
-								web_app: { url: webAppUrl }
-							}
-						]
-					]
-				}
-			})
+			body: JSON.stringify(body)
 		});
 		if (!res.ok) {
 			console.error(`转发 Telegram 失败 status: ${res.status} response: ${await res.text()}`);
@@ -240,7 +245,7 @@ const telegramService = {
 	 * Telegram 的 sendMediaGroup 最多支持 10 个媒体项目
 	 * 返回 TG API 的响应数组（用于归档记录 file_id）
 	 */
-	async sendMediaGroup(c, tgBotToken, chatId, attachments, caption, webAppUrl) {
+	async sendMediaGroup(c, tgBotToken, chatId, threadId, attachments, caption, webAppUrl) {
 		const MAX_MEDIA_PER_GROUP = 10;
 		const results = [];
 
@@ -294,6 +299,11 @@ const telegramService = {
 			const formData = new FormData();
 			formData.append('chat_id', chatId);
 			formData.append('media', JSON.stringify(media));
+
+			// 如果设置了话题ID，添加到请求中
+			if (threadId && threadId > 0) {
+				formData.append('message_thread_id', threadId);
+			}
 
 			if (replyMarkup) {
 				formData.append('reply_markup', JSON.stringify(replyMarkup));

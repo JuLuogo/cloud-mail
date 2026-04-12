@@ -12,5 +12,6 @@ export const tgChannel = sqliteTable('tg_channel', {
 	archiveDays: integer('archive_days').default(7).notNull(),
 	enabled: integer('enabled').default(1).notNull(),
 	priority: integer('priority').default(0).notNull(),
+	threadId: integer('thread_id').default(0).notNull(),
 	createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
 });

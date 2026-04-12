@@ -943,6 +943,11 @@
             <el-input-number v-model="tgChannelForm.priority" :min="0" :max="999"/>
           </div>
           <div class="form-item">
+            <label>{{ $t('channelThreadId') }}</label>
+            <el-input-number v-model="tgChannelForm.threadId" :min="0" :max="999999"/>
+            <span class="form-hint">{{ $t('channelThreadIdDesc') }}</span>
+          </div>
+          <div class="form-item">
             <el-checkbox v-model="tgChannelForm.archiveEnabledBool">{{ $t('archiveFeature') }}</el-checkbox>
           </div>
           <div class="form-item" v-if="tgChannelForm.archiveEnabledBool">
@@ -1170,6 +1175,7 @@ const tgChannelForm = reactive({
   archiveDays: 7,
   enabled: 1,
   priority: 0,
+  threadId: 0,
   enabledBool: true,
   archiveEnabledBool: false,
 })
@@ -1327,6 +1333,7 @@ function resetTgChannelForm() {
   tgChannelForm.archiveDays = 7
   tgChannelForm.enabled = 1
   tgChannelForm.priority = 0
+  tgChannelForm.threadId = 0
   tgChannelForm.enabledBool = true
   tgChannelForm.archiveEnabledBool = false
 }
@@ -1347,6 +1354,7 @@ function editTgChannel(ch) {
   tgChannelForm.archiveDays = ch.archiveDays
   tgChannelForm.enabled = ch.enabled
   tgChannelForm.priority = ch.priority
+  tgChannelForm.threadId = ch.threadId || 0
   tgChannelForm.enabledBool = ch.enabled === 1
   tgChannelForm.archiveEnabledBool = ch.archiveEnabled === 1
   tgChannelEditShow.value = true
@@ -1372,6 +1380,7 @@ function saveTgChannel() {
     archiveDays: tgChannelForm.archiveDays,
     enabled: tgChannelForm.enabledBool ? 1 : 0,
     priority: tgChannelForm.priority,
+    threadId: tgChannelForm.threadId,
   }
   const promise = tgChannelForm.id
     ? updateTgChannel(tgChannelForm.id, data)

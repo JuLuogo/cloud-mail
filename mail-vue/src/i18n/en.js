@@ -521,6 +521,8 @@ const en = {
   channelEnabled: "Enable Channel",
   channelPriority: "Priority",
   channelPriorityDesc: "Lower number = higher priority",
+  channelThreadId: "Thread ID",
+  channelThreadIdDesc: "TG topic message_thread_id (0 = no thread)",
   noChannels: "No channels configured",
   testChannel: "Test",
   testChannelSuccess: "Channel connectivity test passed",

@@ -46,6 +46,7 @@ const tgChannelService = {
 			archiveDays: params.archiveDays ?? 7,
 			enabled: params.enabled ?? 1,
 			priority: params.priority ?? 0,
+			threadId: params.threadId ?? 0,
 		};
 		await orm(c).insert(tgChannel).values(data).run();
 	},
@@ -68,6 +69,7 @@ const tgChannelService = {
 		if (params.archiveDays !== undefined) data.archiveDays = params.archiveDays;
 		if (params.enabled !== undefined) data.enabled = params.enabled;
 		if (params.priority !== undefined) data.priority = params.priority;
+		if (params.threadId !== undefined) data.threadId = params.threadId;
 		await orm(c).update(tgChannel).set(data).where(eq(tgChannel.id, params.id)).run();
 	},
 

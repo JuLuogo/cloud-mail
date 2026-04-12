@@ -510,6 +510,8 @@ const zh = {
   channelEnabled: "启用此频道",
   channelPriority: "优先级",
   channelPriorityDesc: "数字越小优先级越高",
+  channelThreadId: "话题 ID",
+  channelThreadIdDesc: "TG 话题的 message_thread_id（0 = 不使用话题）",
   noChannels: "暂无频道配置",
   testChannel: "测试",
   testChannelSuccess: "频道连通性测试成功",
