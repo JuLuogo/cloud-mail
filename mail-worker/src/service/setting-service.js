@@ -15,7 +15,7 @@ import { forwardRule } from '../entity/forward-rule';
 import { email } from '../entity/email';
 import { att } from '../entity/att';
 import { isDel } from '../const/entity-const';
-import { lt, eq, and, inArray, notInArray, sql, sum, count } from 'drizzle-orm';
+import { lt, eq, and, inArray, sql, sum, count } from 'drizzle-orm';
 
 const settingService = {
 	async refresh(c) {
