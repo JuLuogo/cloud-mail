@@ -10,6 +10,9 @@ import {t} from '../i18n/i18n'
 import verifyRecordService from './verify-record-service';
 import auditService from './audit-service';
 import { auditConst } from '../entity/audit-log';
+import { filterRule } from '../entity/filter-rule';
+import { forwardRule } from '../entity/forward-rule';
+import { lt, eq, and } from 'drizzle-orm';
 
 const settingService = {
 
@@ -287,6 +290,147 @@ const settingService = {
 			linuxdoSwitch: settingRow.linuxdoSwitch,
 			minEmailPrefix: settingRow.minEmailPrefix,
 			projectLink: settingRow.projectLink
+		};
+	},
+
+	async cleanupTempFiles(c, operatorInfo) {
+		const { tempFileCleanEnabled, tempFileCleanDays } = await this.query(c);
+
+		if (!tempFileCleanEnabled) {
+			return { cleaned: 0, message: 'Auto cleanup is disabled' };
+		}
+
+		const prefix = constant.EMAIL_QUEUE_ATT_PREFIX;
+		const objects = await r2Service.listObjects(c, prefix);
+
+		if (objects.length === 0) {
+			return { cleaned: 0, message: 'No temp files found' };
+		}
+
+		const now = Date.now();
+		const expireTime = tempFileCleanDays * 24 * 60 * 60 * 1000;
+		const expireDate = new Date(now - expireTime);
+
+		const toDelete = [];
+		let totalSize = 0;
+
+		for (const obj of objects) {
+			// R2 objects have uploaded and key properties
+			// S3 objects have LastModified and Key properties
+			const uploaded = obj.uploaded || obj.LastModified;
+			if (uploaded && new Date(uploaded) < expireDate) {
+				toDelete.push(obj.key);
+				totalSize += obj.size || 0;
+			}
+		}
+
+		if (toDelete.length === 0) {
+			return { cleaned: 0, message: 'No expired temp files found' };
+		}
+
+		// Delete in batches of 1000
+		const batchSize = 1000;
+		for (let i = 0; i < toDelete.length; i += batchSize) {
+			const batch = toDelete.slice(i, i + batchSize);
+			await r2Service.delete(c, batch);
+		}
+
+		// Audit log
+		await auditService.log(c, {
+			userId: operatorInfo.userId,
+			userEmail: operatorInfo.userEmail,
+			action: 'temp_file_cleanup',
+			targetType: 'system',
+			targetDesc: 'Temp File Cleanup',
+			detail: { cleanedCount: toDelete.length, totalSize }
+		});
+
+		return {
+			cleaned: toDelete.length,
+			totalSize,
+			message: `Cleaned ${toDelete.length} temp files`
+		};
+	},
+
+	async getTempFileStats(c) {
+		const storageType = await r2Service.storageType(c);
+		const prefix = constant.EMAIL_QUEUE_ATT_PREFIX;
+		const objects = await r2Service.listObjects(c, prefix);
+
+		let totalSize = 0;
+		let fileCount = objects.length;
+
+		for (const obj of objects) {
+			totalSize += obj.size || 0;
+		}
+
+		return {
+			storageType,
+			count: fileCount,
+			totalSize,
+			prefix
+		};
+	},
+
+	async cleanupRules(c, operatorInfo) {
+		const { ruleCleanDays } = await this.query(c);
+
+		const expireDate = new Date();
+		expireDate.setDate(expireDate.getDate() - ruleCleanDays);
+		const expireDateStr = expireDate.toISOString().slice(0, 19).replace('T', ' ');
+
+		// 清理过期的过滤规则（软删除超过指定天数的）
+		const filterResult = await orm(c).delete(filterRule).where(
+			and(
+				eq(filterRule.isDel, 1),
+				lt(filterRule.createTime, expireDateStr)
+			)
+		).run();
+
+		// 清理过期的转发规则（软删除超过指定天数的）
+		const forwardResult = await orm(c).delete(forwardRule).where(
+			and(
+				eq(forwardRule.isDel, 1),
+				lt(forwardRule.createTime, expireDateStr)
+			)
+		).run();
+
+		const totalCleaned = (filterResult.rowCount || 0) + (forwardResult.rowCount || 0);
+
+		// 审计日志
+		await auditService.log(c, {
+			userId: operatorInfo.userId,
+			userEmail: operatorInfo.userEmail,
+			action: 'rule_cleanup',
+			targetType: 'system',
+			targetDesc: 'Rule Cleanup',
+			detail: { filterCleaned: filterResult.rowCount || 0, forwardCleaned: forwardResult.rowCount || 0 }
+		});
+
+		return {
+			cleaned: totalCleaned,
+			filterCleaned: filterResult.rowCount || 0,
+			forwardCleaned: forwardResult.rowCount || 0,
+			message: `Cleaned ${filterResult.rowCount || 0} filter rules and ${forwardResult.rowCount || 0} forward rules`
+		};
+	},
+
+	async getRuleStats(c) {
+		const expireDate = new Date();
+		expireDate.setDate(expireDate.getDate() - 30);
+		const expireDateStr = expireDate.toISOString().slice(0, 19).replace('T', ' ');
+
+		// 统计已删除超过30天的规则数量
+		const expiredFilterRules = await orm(c).select().from(filterRule)
+			.where(and(eq(filterRule.isDel, 1), lt(filterRule.createTime, expireDateStr))).all();
+
+		const expiredForwardRules = await orm(c).select().from(forwardRule)
+			.where(and(eq(forwardRule.isDel, 1), lt(forwardRule.createTime, expireDateStr))).all();
+
+		return {
+			expiredFilterRules: expiredFilterRules.length,
+			expiredForwardRules: expiredForwardRules.length,
+			totalExpired: expiredFilterRules.length + expiredForwardRules.length
 		};
 	}
 };

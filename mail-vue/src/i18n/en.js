@@ -443,7 +443,27 @@ const en = {
     pleaseFillRequiredFields: 'Please fill in required fields',
     forwardAvailDomains: 'Available Domains',
     forwardAvailDomainsPlaceholder: 'Separate multiple domains with commas, leave empty to use role settings',
-    forwardAvailDomainsTip: 'Set domains that user can use for catch-all forwarding rules, empty uses role settings'
+    forwardAvailDomainsTip: 'Set domains that user can use for catch-all forwarding rules, empty uses role settings',
+    tempFileCleanup: 'Temp File Cleanup',
+    tempFileCleanEnabled: 'Auto Cleanup',
+    tempFileCleanDays: 'Clean Days',
+    tempFileCleanDaysDesc: 'Clean temp files older than this many days',
+    tempFileStats: 'Temp Files Status',
+    tempFiles: 'files',
+    noTempFiles: 'No temp files',
+    tempFileCleanupConfirm: 'Confirm cleaning all expired temp files?',
+    tempFileCleanupSuccess: 'Cleaned {count} temp files',
+    tempFileCleanupFailed: 'Cleanup failed',
+    ruleCleanup: 'Rule Cleanup',
+    ruleCleanEnabled: 'Auto Cleanup',
+    ruleCleanDays: 'Clean Days',
+    ruleCleanDaysDesc: 'Clean deleted rules older than this many days',
+    ruleStats: 'Rule Status',
+    expiredRules: 'expired rules',
+    noExpiredRules: 'No expired rules',
+    ruleCleanupConfirm: 'Confirm cleaning all expired rules?',
+    ruleCleanupSuccess: 'Cleaned {count} rules',
+    ruleCleanupFailed: 'Cleanup failed'
 }
 
 export default en

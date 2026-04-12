@@ -116,7 +116,11 @@ const en = {
 		"规则删除": "Delete Rules",
 		"审计日志": "Audit Logs",
 		"日志查看": "View Logs",
-		"转发规则": "Forwarding Rules"
+		"转发规则": "Forwarding Rules",
+		"系统清理": "System Cleanup",
+		"临时文件清理": "Temp File Cleanup",
+		"清理执行": "Cleanup Action",
+		"规则清理": "Rule Cleanup"
 	},
 	forwardRuleParamInvalid: 'Rule parameters are incomplete',
 	forwardToEmailInvalid: 'Invalid forward email format',

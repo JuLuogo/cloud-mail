@@ -55,6 +55,10 @@ export const setting = sqliteTable('setting', {
 	sendMethodConfig: text('send_method_config').default("{}").notNull(),
 	localSesApiUrl: text('local_ses_api_url').default('').notNull(),
 	localSesApiKey: text('local_ses_api_key').default('').notNull(),
-	queueEnabled: integer('queue_enabled').default(1).notNull()
+	queueEnabled: integer('queue_enabled').default(1).notNull(),
+	tempFileCleanEnabled: integer('temp_file_clean_enabled').default(0).notNull(),
+	tempFileCleanDays: integer('temp_file_clean_days').default(7).notNull(),
+	ruleCleanEnabled: integer('rule_clean_enabled').default(0).notNull(),
+	ruleCleanDays: integer('rule_clean_days').default(30).notNull()
 });
 export default setting

@@ -1,6 +1,7 @@
 import s3Service from './s3-service';
 import settingService from './setting-service';
 import kvObjService from './kv-obj-service';
+import constant from '../const/constant';
 
 const r2Service = {
 
@@ -72,6 +73,32 @@ const r2Service = {
 			await s3Service.deleteObj(c, key);
 		}
 
+	},
+
+	async listObjects(c, prefix) {
+		const storageType = await this.storageType(c);
+
+		if (storageType === 'R2') {
+			const listed = [];
+			let cursor = undefined;
+			do {
+				const result = await c.env.r2.list({
+					prefix,
+					cursor,
+					limit: 1000
+				});
+				listed.push(...result.objects);
+				cursor = result.truncated ? result.cursor : undefined;
+			} while (cursor);
+			return listed;
+		}
+
+		if (storageType === 'S3') {
+			return await s3Service.listObjects(c, prefix);
+		}
+
+		// KV 存储不支持列表操作
+		return [];
 	}
 
 };

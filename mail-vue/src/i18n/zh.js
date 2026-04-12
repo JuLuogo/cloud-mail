@@ -443,6 +443,26 @@ const zh = {
     pleaseFillRequiredFields: '请填写必填字段',
     forwardAvailDomains: '可用域名',
     forwardAvailDomainsPlaceholder: '多个域名用,分开，留空则跟随角色设置',
-    forwardAvailDomainsTip: '设置用户可以使用 catch-all 转发规则的域名，留空则使用角色设置'
+    forwardAvailDomainsTip: '设置用户可以使用 catch-all 转发规则的域名，留空则使用角色设置',
+    tempFileCleanup: '临时文件清理',
+    tempFileCleanEnabled: '自动清理',
+    tempFileCleanDays: '清理天数',
+    tempFileCleanDaysDesc: '清理多少天前的临时文件',
+    tempFileStats: '临时文件状态',
+    tempFiles: '个文件',
+    noTempFiles: '暂无临时文件',
+    tempFileCleanupConfirm: '确认清理所有过期临时文件吗？',
+    tempFileCleanupSuccess: '已清理 {count} 个临时文件',
+    tempFileCleanupFailed: '清理失败',
+    ruleCleanup: '规则清理',
+    ruleCleanEnabled: '自动清理',
+    ruleCleanDays: '清理天数',
+    ruleCleanDaysDesc: '清理多少天前已删除的规则',
+    ruleStats: '规则状态',
+    expiredRules: '个过期规则',
+    noExpiredRules: '暂无过期规则',
+    ruleCleanupConfirm: '确认清理所有过期规则吗？',
+    ruleCleanupSuccess: '已清理 {count} 条规则',
+    ruleCleanupFailed: '清理失败'
 }
 export default zh

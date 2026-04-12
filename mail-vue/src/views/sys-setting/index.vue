@@ -268,6 +268,80 @@
             </div>
           </div>
 
+          <!-- Temp File Cleanup Card -->
+          <div class="settings-card">
+            <div class="card-title">{{ $t('tempFileCleanup') }}</div>
+            <div class="card-content">
+              <div class="setting-item">
+                <div><span>{{ $t('tempFileCleanEnabled') }}</span></div>
+                <div>
+                  <el-switch @change="change" :before-change="beforeChange" :active-value="1" :inactive-value="0"
+                             v-model="setting.tempFileCleanEnabled"/>
+                </div>
+              </div>
+              <div class="setting-item">
+                <div>
+                  <span>{{ $t('tempFileCleanDays') }}</span>
+                  <el-tooltip effect="dark" :content="$t('tempFileCleanDaysDesc')">
+                    <Icon class="warning" icon="fe:warning" width="18" height="18"/>
+                  </el-tooltip>
+                </div>
+                <div class="r2domain">
+                  <el-input-number size="small" v-model="tempFileCleanDays" @change="saveTempFileCleanDays" :min="1" :max="365" :disabled="setting.tempFileCleanEnabled !== 1"/>
+                </div>
+              </div>
+              <div class="setting-item">
+                <div><span>{{ $t('tempFileStats') }}</span></div>
+                <div class="r2domain">
+                  <span v-if="tempFileStats.count > 0">
+                    {{ tempFileStats.count }} {{ $t('tempFiles') }}, {{ formatSize(tempFileStats.totalSize) }}
+                  </span>
+                  <span v-else>{{ $t('noTempFiles') }}</span>
+                  <el-button class="opt-button" size="small" type="primary" @click="openTempFileCleanup" :loading="tempFileCleanupLoading">
+                    <Icon icon="material-symbols:cleaning-services-rounded" width="16" height="16"/>
+                  </el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rule Cleanup Card -->
+          <div class="settings-card">
+            <div class="card-title">{{ $t('ruleCleanup') }}</div>
+            <div class="card-content">
+              <div class="setting-item">
+                <div><span>{{ $t('ruleCleanEnabled') }}</span></div>
+                <div>
+                  <el-switch @change="change" :before-change="beforeChange" :active-value="1" :inactive-value="0"
+                             v-model="setting.ruleCleanEnabled"/>
+                </div>
+              </div>
+              <div class="setting-item">
+                <div>
+                  <span>{{ $t('ruleCleanDays') }}</span>
+                  <el-tooltip effect="dark" :content="$t('ruleCleanDaysDesc')">
+                    <Icon class="warning" icon="fe:warning" width="18" height="18"/>
+                  </el-tooltip>
+                </div>
+                <div class="r2domain">
+                  <el-input-number size="small" v-model="ruleCleanDays" @change="saveRuleCleanDays" :min="1" :max="365" :disabled="setting.ruleCleanEnabled !== 1"/>
+                </div>
+              </div>
+              <div class="setting-item">
+                <div><span>{{ $t('ruleStats') }}</span></div>
+                <div class="r2domain">
+                  <span v-if="ruleStatsData.totalExpired > 0">
+                    {{ ruleStatsData.totalExpired }} {{ $t('expiredRules') }}
+                  </span>
+                  <span v-else>{{ $t('noExpiredRules') }}</span>
+                  <el-button class="opt-button" size="small" type="primary" @click="openRuleCleanup" :loading="ruleCleanupLoading">
+                    <Icon icon="material-symbols:cleaning-services-rounded" width="16" height="16"/>
+                  </el-button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="settings-card">
             <div class="card-title">{{ $t('emailPush') }}</div>
             <div class="card-content">
@@ -795,7 +869,7 @@
 
 <script setup>
 import {computed, defineOptions, reactive, ref} from "vue";
-import {deleteBackground, setBackground, settingQuery, settingSet} from "@/request/setting.js";
+import {deleteBackground, setBackground, settingQuery, settingSet, cleanupTempFiles, tempFileStats, cleanupRules, ruleStats} from "@/request/setting.js";
 import {useSettingStore} from "@/store/setting.js";
 import {useUiStore} from "@/store/ui.js";
 import {useUserStore} from "@/store/user.js";
@@ -926,6 +1000,13 @@ const tgMsgToOption = [{label: t('show'), value: 'show'}, {label: t('hide'), val
 const tgMsgTextOption = [{label: t('show'), value: 'show'}, {label: t('hide'), value: 'hide'}]
 const tgMsgLabelWidth = computed(() => locale.value === 'en' ? '120px' : '100px');
 
+const tempFileStats = ref({ count: 0, totalSize: 0 })
+const tempFileCleanupLoading = ref(false)
+const tempFileCleanDays = ref(7)
+const ruleStatsData = ref({ totalExpired: 0, expiredFilterRules: 0, expiredForwardRules: 0 })
+const ruleCleanupLoading = ref(false)
+const ruleCleanDays = ref(30)
+
 getSettings()
 getUpdate()
 
@@ -942,10 +1023,98 @@ function getSettings() {
     r2DomainInput.value = setting.value.r2Domain
     addVerifyCount.value = setting.value.addVerifyCount
     regVerifyCount.value = setting.value.regVerifyCount
+    tempFileCleanDays.value = setting.value.tempFileCleanDays || 7
+    ruleCleanDays.value = setting.value.ruleCleanDays || 30
     resetNoticeForm()
     resetAddS3Form()
     resetEmailPrefix()
+    loadTempFileStats()
+    loadRuleStats()
   })
+}
+
+function loadTempFileStats() {
+  tempFileStats().then(res => {
+    tempFileStats.value = res.data || { count: 0, totalSize: 0 }
+  }).catch(() => {
+    tempFileStats.value = { count: 0, totalSize: 0 }
+  })
+}
+
+function loadRuleStats() {
+  ruleStats().then(res => {
+    ruleStatsData.value = res.data || { totalExpired: 0, expiredFilterRules: 0, expiredForwardRules: 0 }
+  }).catch(() => {
+    ruleStatsData.value = { totalExpired: 0, expiredFilterRules: 0, expiredForwardRules: 0 }
+  })
+}
+
+function formatSize(bytes) {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+function openTempFileCleanup() {
+  ElMessageBox.confirm(t('tempFileCleanupConfirm'), {
+    confirmButtonText: t('confirm'),
+    cancelButtonText: t('cancel'),
+    type: 'warning'
+  }).then(() => {
+    tempFileCleanupLoading.value = true
+    cleanupTempFiles().then(res => {
+      ElMessage({
+        message: t('tempFileCleanupSuccess', { count: res.data?.cleaned || 0 }),
+        type: 'success',
+        plain: true
+      })
+      loadTempFileStats()
+    }).catch(() => {
+      ElMessage({
+        message: t('tempFileCleanupFailed'),
+        type: 'error',
+        plain: true
+      })
+    }).finally(() => {
+      tempFileCleanupLoading.value = false
+    })
+  })
+}
+
+function saveTempFileCleanDays() {
+  editSetting({ tempFileCleanDays: tempFileCleanDays.value })
+}
+
+function openRuleCleanup() {
+  ElMessageBox.confirm(t('ruleCleanupConfirm'), {
+    confirmButtonText: t('confirm'),
+    cancelButtonText: t('cancel'),
+    type: 'warning'
+  }).then(() => {
+    ruleCleanupLoading.value = true
+    cleanupRules().then(res => {
+      ElMessage({
+        message: t('ruleCleanupSuccess', { count: res.data?.cleaned || 0 }),
+        type: 'success',
+        plain: true
+      })
+      loadRuleStats()
+    }).catch(() => {
+      ElMessage({
+        message: t('ruleCleanupFailed'),
+        type: 'error',
+        plain: true
+      })
+    }).finally(() => {
+      ruleCleanupLoading.value = false
+    })
+  })
+}
+
+function saveRuleCleanDays() {
+  editSetting({ ruleCleanDays: ruleCleanDays.value })
 }
 
 

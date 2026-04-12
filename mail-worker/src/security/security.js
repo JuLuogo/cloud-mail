@@ -57,6 +57,10 @@ const requirePerms = [
 	'/setting/deleteBackground',
 	'/setting/set',
 	'/setting/query',
+	'/setting/cleanupTempFiles',
+	'/setting/tempFileStats',
+	'/setting/cleanupRules',
+	'/setting/ruleStats',
 	'/user/delete',
 	'/user/setPwd',
 	'/user/setStatus',
@@ -148,6 +152,10 @@ const permKey = {
 	'forward-rule:add': ['/forward-rule/add'],
 	'forward-rule:update': ['/forward-rule/update', '/forward-rule/toggle'],
 	'forward-rule:delete': ['/forward-rule/delete'],
+	'temp-file-clean:query': ['/setting/tempFileStats'],
+	'temp-file-clean:action': ['/setting/cleanupTempFiles'],
+	'rule-clean:query': ['/setting/ruleStats'],
+	'rule-clean:action': ['/setting/cleanupRules'],
 };
 
 app.use('*', async (c, next) => {

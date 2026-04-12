@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectsCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import settingService from './setting-service';
 import domainUtils from '../utils/domain-uitls';
 import { settingConst } from '../const/entity-const';
@@ -92,6 +92,32 @@ const s3Service = {
 				}
 			})
 		);
+	},
+
+	async listObjects(c, prefix) {
+		const client = await this.client(c);
+		const { bucket } = await settingService.query(c);
+		const listed = [];
+		let continuationToken = undefined;
+
+		do {
+			const result = await client.send(new ListObjectsV2Command({
+				Bucket: bucket,
+				Prefix: prefix,
+				ContinuationToken: continuationToken,
+				MaxKeys: 1000
+			}));
+			if (result.Contents) {
+				listed.push(...result.Contents.map(obj => ({
+					key: obj.Key,
+					size: obj.Size,
+					uploaded: obj.LastModified
+				})));
+			}
+			continuationToken = result.IsTruncated ? result.NextContinuationToken : undefined;
+		} while (continuationToken);
+
+		return listed;
 	},
 
 

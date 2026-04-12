@@ -35,6 +35,9 @@ const dbInit = {
 		await this.v2_14DB(c);
 		await this.v2_15DB(c);
 		await this.v2_16DB(c);
+		await this.v2_17DB(c);
+		await this.v2_18DB(c);
+		await this.v2_19DB(c);
 		await settingService.refresh(c);
 		return c.text('success');
 	},
@@ -175,6 +178,50 @@ const dbInit = {
 			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN queue_enabled INTEGER NOT NULL DEFAULT 1;`).run();
 		} catch (e) {
 			console.warn(`跳过字段：${e.message}`);
+		}
+	},
+
+	async v2_17DB(c) {
+		// 添加临时文件清理配置字段
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN temp_file_clean_enabled INTEGER NOT NULL DEFAULT 0;`).run();
+		} catch (e) {
+			console.warn(`跳过字段：${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN temp_file_clean_days INTEGER NOT NULL DEFAULT 7;`).run();
+		} catch (e) {
+			console.warn(`跳过字段：${e.message}`);
+		}
+	},
+
+	async v2_18DB(c) {
+		// 添加规则清理配置字段
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN rule_clean_enabled INTEGER NOT NULL DEFAULT 0;`).run();
+		} catch (e) {
+			console.warn(`跳过字段：${e.message}`);
+		}
+		try {
+			await c.env.db.prepare(`ALTER TABLE setting ADD COLUMN rule_clean_days INTEGER NOT NULL DEFAULT 30;`).run();
+		} catch (e) {
+			console.warn(`跳过字段：${e.message}`);
+		}
+	},
+
+	async v2_19DB(c) {
+		// 添加系统清理权限类别
+		try {
+			await c.env.db.prepare(`
+				INSERT INTO perm (perm_id, name, perm_key, pid, type, sort) VALUES
+				(69, '系统清理', NULL, 0, 1, 7.0),
+				(70, '临时文件清理', 'temp-file-clean:query', 69, 2, 0),
+				(71, '清理执行', 'temp-file-clean:action', 69, 2, 1),
+				(72, '规则清理', 'rule-clean:query', 69, 2, 2),
+				(73, '清理执行', 'rule-clean:action', 69, 2, 3)
+			`).run();
+		} catch (e) {
+			console.warn(`跳过权限数据：${e.message}`);
 		}
 	},
 
