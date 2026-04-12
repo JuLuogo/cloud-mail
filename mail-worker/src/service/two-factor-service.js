@@ -31,10 +31,10 @@ const twoFactorService = {
 			throw new BizError(t('notExistUser'), 404);
 		}
 
+		// 2FA 已启用时，不返回密钥明文，防止 session 被劫持后泄露密钥
 		if (userRow.totpSecret && userRow.totpEnabled) {
 			return {
-				secret: userRow.totpSecret,
-				otpUrl: this.generateOtpUrl(userRow.email, userRow.totpSecret)
+				enabled: true
 			};
 		}
 

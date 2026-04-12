@@ -11,10 +11,10 @@ const resendService = {
 	async verifyWebhookSignature(c, rawBody) {
 		const webhookSecret = c.env.RESEND_WEBHOOK_SECRET;
 
-		// 如果没有配置 webhook secret，跳过验证（但记录警告）
+		// 未配置 secret 时拒绝请求，不跳过验证
 		if (!webhookSecret) {
-			console.warn('[Webhook] Warning: RESEND_WEBHOOK_SECRET not configured, skipping signature verification');
-			return true;
+			console.warn('[Webhook] RESEND_WEBHOOK_SECRET not configured, rejecting request');
+			return false;
 		}
 
 		const signature = c.req.header('svix-signature');
@@ -22,6 +22,14 @@ const resendService = {
 
 		if (!signature || !timestamp) {
 			console.warn('[Webhook] Missing svix-signature or svix-timestamp header');
+			return false;
+		}
+
+		// 检查 timestamp 是否在 5 分钟内，防止重放攻击
+		const now = Math.floor(Date.now() / 1000);
+		const webhookTimestamp = parseInt(timestamp, 10);
+		if (isNaN(webhookTimestamp) || Math.abs(now - webhookTimestamp) > 300) {
+			console.warn('[Webhook] Timestamp too old or invalid, possible replay attack');
 			return false;
 		}
 
@@ -58,7 +66,12 @@ const resendService = {
 			encoder.encode(data)
 		);
 
-		const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
+		const sigBytes = new Uint8Array(signatureBuffer);
+		let sigBinary = '';
+		for (let i = 0; i < sigBytes.length; i++) {
+			sigBinary += String.fromCharCode(sigBytes[i]);
+		}
+		const expectedSignature = btoa(sigBinary);
 
 		// 使用 timingSafeEqual 防止时序攻击
 		const sigBuffer = Buffer.from(v1Signature);
@@ -73,10 +86,10 @@ const resendService = {
 		return true;
 	},
 
-	async webhooks(c, body) {
-		// Webhook 签名验证
-		const rawBody = JSON.stringify(body);
+	async webhooks(c, rawBody) {
+		// Webhook 签名验证（直接使用原始请求体，避免重新序列化导致签名不一致）
 		const isValid = await this.verifyWebhookSignature(c, rawBody);
+		const body = JSON.parse(rawBody);
 
 		if (!isValid) {
 			throw new BizError('Invalid webhook signature', 401);

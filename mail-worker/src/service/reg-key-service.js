@@ -75,8 +75,9 @@ const regKeyService = {
 	},
 
 	async clearNotUse(c) {
-		let now = formatDetailDate(toUtc().tz('Asia/Shanghai').startOf('day'))
-		await orm(c).delete(regKey).where(or(eq(regKey.count, 0),sql`datetime(${regKey.expireTime}, '+8 hours') < datetime(${now})`)).run();
+		// 使用 UTC 时间比较，避免硬编码时区
+		let now = formatDetailDate(toUtc().startOf('day'))
+		await orm(c).delete(regKey).where(or(eq(regKey.count, 0),sql`datetime(${regKey.expireTime}) < datetime(${now})`)).run();
 	},
 
 	selectByCode(c, code) {

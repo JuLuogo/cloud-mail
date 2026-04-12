@@ -199,13 +199,23 @@ const loginService = {
 		return { type: regKeyRow.roleId, regKeyId: regKeyRow.regKeyId };
 	},
 
-	async login(c, params, noVerifyPwd = false) {
+	// OAuth 专用登录方法，跳过密码验证（仅限内部调用）
+	async loginByOAuth(c, email) {
+		return this._doLogin(c, email, true);
+	},
+
+	async login(c, params) {
 
 		const { email, password } = params;
 
-		if ((!email || !password) && !noVerifyPwd) {
+		if (!email || !password) {
 			throw new BizError(t('emailAndPwdEmpty'));
 		}
+
+		return this._doLogin(c, email, false, password);
+	},
+
+	async _doLogin(c, email, skipPwdCheck = false, password = null) {
 
 		// 使用专门的认证查询，只返回必要的认证字段
 		const userRow = await userService.selectForAuth(c, email);
@@ -222,7 +232,7 @@ const loginService = {
 			throw new BizError(t('isBanUser'));
 		}
 
-		if (!await cryptoUtils.verifyPassword(password, userRow.salt, userRow.password) && !noVerifyPwd) {
+		if (!skipPwdCheck && !await cryptoUtils.verifyPassword(password, userRow.salt, userRow.password)) {
 			throw new BizError(t('IncorrectPwd'));
 		}
 
@@ -240,7 +250,8 @@ const loginService = {
 
 		if (authInfo && (authInfo.user.email === userRow.email)) {
 
-			if (authInfo.tokens.length > 10) {
+			// 限制最大 token 数量，清理最旧的 token
+			while (authInfo.tokens.length >= 10) {
 				authInfo.tokens.shift();
 			}
 
@@ -271,6 +282,7 @@ const loginService = {
 			return;
 		}
 		const index = authInfo.tokens.findIndex(item => item === token);
+		if (index === -1) return;
 		authInfo.tokens.splice(index, 1);
 		await c.env.kv.put(KvConst.AUTH_INFO + userId, JSON.stringify(authInfo));
 	}

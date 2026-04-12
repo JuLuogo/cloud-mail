@@ -517,6 +517,10 @@ const en = {
   deleteChannelConfirm: "Confirm deleting this channel?",
   channelChatIdRequired: "Chat ID is required",
   maxSizeExceeded: "File size cannot exceed 50MB",
+  oauthBindEmail: "Bind Email",
+  oauthBindBtn: "Bind",
+  oauthLoggingIn: "Logging in...",
+  oauthBindPrompt: "Please register and bind an email",
 };
 
 export default en;

@@ -41,57 +41,8 @@ const routes = [
                     menu: true
                 }
             },
-            {
-                path: '/starred',
-                name: 'star',
-                component: () => import('@/views/star/index.vue'),
-                meta: {
-                    title: 'starred',
-                    name: 'star',
-                    menu: true
-                }
-            },
-            {
-                path: '/archive',
-                name: 'archive',
-                component: () => import('@/views/archive/index.vue'),
-                meta: {
-                    title: 'archive',
-                    name: 'archive',
-                    menu: true
-                }
-            },
-            {
-                path: '/contact',
-                name: 'contact',
-                component: () => import('@/views/contact/index.vue'),
-                meta: {
-                    title: 'contacts',
-                    name: 'contact',
-                    menu: true
-                }
-            },
-            {
-                path: '/audit',
-                name: 'audit',
-                component: () => import('@/views/audit/index.vue'),
-                meta: {
-                    title: 'auditLog',
-                    name: 'audit',
-                    menu: true,
-                    adminOnly: true
-                }
-            },
-            {
-                path: '/filter',
-                name: 'filter',
-                component: () => import('@/views/filter/index.vue'),
-                meta: {
-                    title: 'filterRules',
-                    name: 'filter',
-                    menu: true
-                }
-            },
+            // star, archive, contact, audit, filter 路由由 perm.js 的 permsToRouter() 动态注册
+            // 避免无权限用户也能访问这些页面
         ]
 
     },
@@ -167,18 +118,26 @@ function loadBackground(next) {
         const img = new Image();
         img.src = src;
 
+        let called = false;
+        const safeNext = () => {
+            if (!called) {
+                called = true;
+                next();
+            }
+        };
+
         img.onload = () => {
-            next()
+            safeNext()
         };
 
         img.onerror = () => {
             console.warn("背景图片加载失败:", img.src);
-            next()
+            safeNext()
         };
 
         setTimeout(() => {
             console.warn("背景加载超时，已放行");
-            next()
+            safeNext()
         }, 3000)
 
     } else {

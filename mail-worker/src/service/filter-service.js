@@ -4,6 +4,10 @@ import { and, eq, desc, asc } from 'drizzle-orm';
 import { t } from '../i18n/i18n';
 import BizError from '../error/biz-error';
 
+// 允许的过滤字段白名单
+const ALLOWED_FIELDS = ['subject', 'sendEmail', 'toEmail', 'name', 'text', 'content'];
+const ALLOWED_OPERATORS = ['contains', 'equals', 'startsWith', 'endsWith'];
+
 const filterService = {
 
 	async list(c, userId) {
@@ -16,6 +20,14 @@ const filterService = {
 		const { name, field, operator, value, action, actionTarget, priority } = params;
 
 		if (!name || !field || !operator || !value || action === undefined) {
+			throw new BizError(t('filterRuleInvalid'));
+		}
+
+		if (!ALLOWED_FIELDS.includes(field)) {
+			throw new BizError(t('filterRuleInvalid'));
+		}
+
+		if (!ALLOWED_OPERATORS.includes(operator)) {
 			throw new BizError(t('filterRuleInvalid'));
 		}
 
@@ -33,6 +45,14 @@ const filterService = {
 
 	async update(c, params, userId) {
 		const { ruleId, name, field, operator, value, action, actionTarget, priority, status } = params;
+
+		if (field && !ALLOWED_FIELDS.includes(field)) {
+			throw new BizError(t('filterRuleInvalid'));
+		}
+
+		if (operator && !ALLOWED_OPERATORS.includes(operator)) {
+			throw new BizError(t('filterRuleInvalid'));
+		}
 
 		const rule = await orm(c).select().from(filterRule)
 			.where(and(eq(filterRule.ruleId, ruleId), eq(filterRule.userId, userId)))

@@ -186,7 +186,8 @@ const publicService = {
 
 		const uuid = uuidv4();
 
-		await c.env.kv.put(KvConst.PUBLIC_KEY, uuid);
+		// Token 设置 24 小时过期，防止长期滥用
+		await c.env.kv.put(KvConst.PUBLIC_KEY, uuid, { expirationTtl: 60 * 60 * 24 });
 
 		return {token: uuid}
 	},
@@ -195,15 +196,15 @@ const publicService = {
 
 		const { email, password } = params
 
-		// 使用专门的认证查询
-		const userRow = await userService.selectForAuth(c, email);
-
+		// 先检查是否为管理员，避免不必要的数据库查询，并使用统一错误信息防止邮箱枚举
 		if (email !== c.env.admin) {
-			throw new BizError(t('notAdmin'));
+			throw new BizError(t('IncorrectPwd'));
 		}
 
+		const userRow = await userService.selectForAuth(c, email);
+
 		if (!userRow || userRow.isDel === isDel.DELETE) {
-			throw new BizError(t('notExistUser'));
+			throw new BizError(t('IncorrectPwd'));
 		}
 
 		if (!await cryptoUtils.verifyPassword(password, userRow.salt, userRow.password)) {

@@ -1,11 +1,12 @@
 import { parseHTML } from 'linkedom';
+import verifyUtils from './verify-utils';
 
 const emailUtils = {
 
+	// 统一使用 verify-utils 的 isEmail，避免两套不同的正则
 	isEmail(email) {
 		if (typeof email !== 'string') return false;
-		const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		return regex.test(email);
+		return verifyUtils.isEmail(email);
 	},
 
 	getDomain(email) {

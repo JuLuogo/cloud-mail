@@ -506,5 +506,9 @@ const zh = {
   deleteChannelConfirm: "确认删除此频道吗？",
   channelChatIdRequired: "Chat ID 不能为空",
   maxSizeExceeded: "文件大小不能超过 50MB",
+  oauthBindEmail: "注册邮箱",
+  oauthBindBtn: "绑定",
+  oauthLoggingIn: "登录中...",
+  oauthBindPrompt: "请注册绑定一个邮箱",
 };
 export default zh;

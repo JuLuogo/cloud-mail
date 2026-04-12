@@ -4,6 +4,11 @@ import { and, eq, desc, asc, count, like, or, sql } from 'drizzle-orm';
 import { t } from '../i18n/i18n';
 import BizError from '../error/biz-error';
 
+// 转义 LIKE 通配符，防止用户输入 % 或 _ 导致意外匹配
+function escapeLike(str) {
+	return str.replace(/[%_]/g, '\\$&');
+}
+
 const contactService = {
 
 	async list(c, params, userId) {
@@ -28,11 +33,12 @@ const contactService = {
 		}
 
 		if (keyword) {
+			const escaped = escapeLike(keyword);
 			conditions.push(
 				or(
-					like(contact.name, `%${keyword}%`),
-					like(contact.email, `%${keyword}%`),
-					like(contact.company, `%${keyword}%`)
+					like(contact.name, `%${escaped}%`),
+					like(contact.email, `%${escaped}%`),
+					like(contact.company, `%${escaped}%`)
 				)
 			);
 		}

@@ -401,9 +401,9 @@
                       placeholder="Select"
                       class="bot-verify-select"
                   >
-                    <el-option key="1" :value="0" :label="$t('enable')"/>
-                    <el-option key="1" :value="1" :label="$t('disable')"/>
-                    <el-option key="1" :value="2" :label="$t('rulesVerify')"/>
+                    <el-option :key="0" :value="0" :label="$t('enable')"/>
+                    <el-option :key="1" :value="1" :label="$t('disable')"/>
+                    <el-option :key="2" :value="2" :label="$t('rulesVerify')"/>
                   </el-select>
                 </div>
               </div>
@@ -420,9 +420,9 @@
                       placeholder="Select"
                       class="bot-verify-select"
                   >
-                    <el-option key="1" :value="0" :label="$t('enable')"/>
-                    <el-option key="1" :value="1" :label="$t('disable')"/>
-                    <el-option key="1" :value="2" :label="$t('rulesVerify')"/>
+                    <el-option :key="0" :value="0" :label="$t('enable')"/>
+                    <el-option :key="1" :value="1" :label="$t('disable')"/>
+                    <el-option :key="2" :value="2" :label="$t('rulesVerify')"/>
                   </el-select>
                 </div>
               </div>

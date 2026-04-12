@@ -75,12 +75,12 @@ const emailService = {
 			)
 			.where(
 				and(
-					allReceive ? eq(1,1) : eq(email.accountId, accountId),
-					eq(email.userId, userId),
-					timeSort ? gt(email.emailId, emailId) : lt(email.emailId, emailId),
-					eq(email.type, type),
-					eq(email.isDel, isDel.NORMAL),
-					eq(account.isDel, isDel.NORMAL)
+						...(allReceive ? [] : [eq(email.accountId, accountId)]),
+						eq(email.userId, userId),
+						timeSort ? gt(email.emailId, emailId) : lt(email.emailId, emailId),
+						eq(email.type, type),
+						eq(email.isDel, isDel.NORMAL),
+						eq(account.isDel, isDel.NORMAL)
 				)
 			);
 
@@ -99,7 +99,7 @@ const emailService = {
 			)
 			.where(
 				and(
-					allReceive ? eq(1,1) : eq(email.accountId, accountId),
+					...(allReceive ? [] : [eq(email.accountId, accountId)]),
 					eq(email.userId, userId),
 					eq(email.type, type),
 					eq(email.isDel, isDel.NORMAL),
@@ -109,7 +109,7 @@ const emailService = {
 
 		const latestEmailQuery = orm(c).select().from(email).where(
 			and(
-				allReceive ? eq(1,1) : eq(email.accountId, accountId),
+				...(allReceive ? [] : [eq(email.accountId, accountId)]),
 				eq(email.userId, userId),
 				eq(email.type, type),
 				eq(email.isDel, isDel.NORMAL)
@@ -623,7 +623,7 @@ const emailService = {
 					eq(email.userId, userId),
 					eq(email.isDel, isDel.NORMAL),
 					eq(account.isDel, isDel.NORMAL),
-					allReceive ? eq(1,1) : eq(email.accountId, accountId),
+					...(allReceive ? [] : [eq(email.accountId, accountId)]),
 					eq(email.type, emailConst.type.RECEIVE)
 				))
 			.orderBy(desc(email.emailId))

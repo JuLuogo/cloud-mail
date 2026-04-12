@@ -2,7 +2,12 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 const base64url = (input) => {
-	const str = btoa(String.fromCharCode(...new Uint8Array(input)));
+	const bytes = new Uint8Array(input);
+	let binary = '';
+	for (let i = 0; i < bytes.length; i++) {
+		binary += String.fromCharCode(bytes[i]);
+	}
+	const str = btoa(binary);
 	return str.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 };
 

@@ -12,5 +12,8 @@ app.get('/static/*', async (c) => {
 // /attachments/* 用于访问邮件附件（需要 JWT 认证）
 app.get('/attachments/*', async (c) => {
 	const key = c.req.path.split('/attachments/')[1];
+	if (!key) {
+		return c.text('Not Found', 404);
+	}
 	return await kvObjService.toObjResp(c, key);
 });

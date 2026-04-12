@@ -74,7 +74,11 @@ const s3Service = {
 				// 使用 Web Crypto API 计算 MD5 校验和
 				const hashBuffer = await crypto.subtle.digest('MD5', data);
 				const hashArray = new Uint8Array(hashBuffer);
-				const contentMD5 = btoa(String.fromCharCode.apply(null, hashArray));
+				let md5Binary = '';
+				for (let i = 0; i < hashArray.length; i++) {
+					md5Binary += String.fromCharCode(hashArray[i]);
+				}
+				const contentMD5 = btoa(md5Binary);
 
 				args.request.headers["Content-MD5"] = contentMD5;
 

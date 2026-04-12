@@ -5,12 +5,17 @@ import { eq, inArray } from 'drizzle-orm';
 import userService from "./user-service";
 import loginService from "./login-service";
 import cryptoUtils from "../utils/crypto-utils";
+import verifyUtils from "../utils/verify-utils";
 
 const oauthService = {
 
 	async bindUser(c, params) {
 
 		const { email, oauthUserId, code } = params;
+
+		if (!verifyUtils.isEmail(email)) {
+			throw new BizError('Invalid email format');
+		}
 
 		const oauthRow = await this.getById(c, oauthUserId);
 
@@ -25,7 +30,7 @@ const oauthService = {
 		userRow = await userService.selectByEmail(c, email);
 
 		await orm(c).update(oauth).set({ userId: userRow.userId }).where(eq(oauth.oauthUserId, oauthUserId)).run();
-		const jwtToken = await loginService.login(c, { email, password: null }, true);
+		const jwtToken = await loginService.loginByOAuth(c, email);
 
 		return { userInfo: oauthRow, token: jwtToken}
 	},
@@ -81,7 +86,7 @@ const oauthService = {
 			return { userInfo: oauthRow, token: null }
 		}
 
-		const JwtToken = await loginService.login(c, { email: userRow.email, password: null }, true);
+		const JwtToken = await loginService.loginByOAuth(c, userRow.email);
 		return { userInfo: oauthRow, token: JwtToken }
 	},
 

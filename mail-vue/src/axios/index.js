@@ -48,7 +48,6 @@ http.interceptors.response.use((res) => {
 
             } else if (data.code === 502) {
                 ElMessage({
-                    dangerouslyUseHTMLString: true,
                     message: data.message,
                     type: 'error',
                     plain: true,
@@ -95,7 +94,6 @@ http.interceptors.response.use((res) => {
                 plain: true,
                 grouping: true
             })
-            ElMessage.error('')
         } else if (error.response) {
             ElMessage({
                 message: i18n.global.t('serverBusyErrorMsg'),

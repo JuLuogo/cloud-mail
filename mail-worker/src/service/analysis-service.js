@@ -21,8 +21,11 @@ const analysisService = {
 
 		localDate = dayjs(localDate.format('YYYY-MM-DD HH:mm:ss'))
 
-		//获取时差
-		const diffHours = localDate.diff(utcDate, 'hour',true);
+		//获取时差（强制转为整数，防止 SQL 注入）
+		const diffHours = Math.round(Number(localDate.diff(utcDate, 'hour', true)));
+		if (isNaN(diffHours) || diffHours < -12 || diffHours > 14) {
+			throw new Error('Invalid timezone offset');
+		}
 
 
 		const [

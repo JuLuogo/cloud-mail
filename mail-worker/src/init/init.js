@@ -5,10 +5,11 @@ import {emailConst} from "../const/entity-const";
 const dbInit = {
 	async init(c) {
 
-		const secret = c.req.param('secret');
+		// 支持 URL 路径参数（向后兼容）和 Header 方式传递 secret
+		const secret = c.req.param('secret') || c.req.header('X-Init-Secret');
 
-		if (secret !== c.env.jwt_secret) {
-			return c.text('❌ JWT secret mismatch');
+		if (!secret || secret !== c.env.jwt_secret) {
+			return c.text('❌ JWT secret mismatch', 403);
 		}
 
 		await this.intDB(c);

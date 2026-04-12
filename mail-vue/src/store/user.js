@@ -9,6 +9,7 @@ export const useUserStore = defineStore('user', {
     actions: {
         refreshUserList() {
             loginUserInfo().then(user => {
+                this.user = user
                 this.refreshList ++
             })
         },
