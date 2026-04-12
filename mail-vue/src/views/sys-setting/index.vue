@@ -1147,6 +1147,7 @@ function getSettings() {
     resetEmailPrefix()
     loadTempFileStats()
     loadRuleStats()
+    loadTgChannels()
   })
 }
 

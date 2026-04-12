@@ -2,7 +2,7 @@ import orm from '../entity/orm';
 import { tgArchive } from '../entity/tg-archive';
 import { tgChannel } from '../entity/tg-channel';
 import { att } from '../entity/att';
-import { eq, and, lt, inArray } from 'drizzle-orm';
+import { eq, and, lt, inArray, count, sql } from 'drizzle-orm';
 import r2Service from './r2-service';
 import settingService from './setting-service';
 
@@ -180,21 +180,24 @@ const tgArchiveService = {
 	 * 获取归档统计信息
 	 */
 	async getArchiveStats(c) {
-		const totalArchived = await orm(c)
-			.select({ id: tgArchive.id })
+		const totalResult = await orm(c)
+			.select({ cnt: count() })
 			.from(tgArchive)
-			.all();
+			.get();
 
-		const cacheCleaned = await orm(c)
-			.select({ id: tgArchive.id })
+		const cleanedResult = await orm(c)
+			.select({ cnt: count() })
 			.from(tgArchive)
 			.where(eq(tgArchive.cacheCleaned, 1))
-			.all();
+			.get();
+
+		const totalArchived = totalResult?.cnt || 0;
+		const cacheCleaned = cleanedResult?.cnt || 0;
 
 		return {
-			totalArchived: totalArchived.length,
-			cacheCleaned: cacheCleaned.length,
-			cacheActive: totalArchived.length - cacheCleaned.length,
+			totalArchived,
+			cacheCleaned,
+			cacheActive: totalArchived - cacheCleaned,
 		};
 	},
 };
