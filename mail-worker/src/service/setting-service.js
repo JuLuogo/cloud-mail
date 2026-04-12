@@ -468,9 +468,14 @@ const settingService = {
 			orphaned: { count: 0, size: 0, files: [] },
 		};
 
+		// 调试日志
+		console.log('[PreviewCleanup] tempFileCleanDays:', tempFileCleanDays);
+
 		// 1. 预览队列临时文件
 		const queuePrefix = constant.EMAIL_QUEUE_ATT_PREFIX;
+		console.log('[PreviewCleanup] queuePrefix:', queuePrefix);
 		const queueObjects = await r2Service.listObjects(c, queuePrefix);
+		console.log('[PreviewCleanup] queueObjects length:', queueObjects.length);
 		if (queueObjects.length > 0) {
 			const now = Date.now();
 			const expireTime = tempFileCleanDays * 24 * 60 * 60 * 1000;
@@ -528,7 +533,9 @@ const settingService = {
 
 		// 3. 预览孤立文件
 		const attPrefix = constant.ATTACHMENT_PREFIX;
+		console.log('[PreviewCleanup] attPrefix:', attPrefix);
 		const storageObjects = await r2Service.listObjects(c, attPrefix);
+		console.log('[PreviewCleanup] storageObjects length:', storageObjects.length);
 		if (storageObjects.length > 0) {
 			const dbKeysResult = await orm(c).selectDistinct({ key: att.key }).from(att).all();
 			const dbKeys = new Set(dbKeysResult.map((r) => r.key));
