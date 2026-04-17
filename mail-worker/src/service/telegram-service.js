@@ -241,6 +241,68 @@ const telegramService = {
 	},
 
 	/**
+	 * 发送单一类型的媒体组（sendMediaGroup 要求所有媒体项类型一致）
+	 */
+	async sendMediaGroupByType(c, tgBotToken, chatId, threadId, attachments, caption, mediaType, isFirstBatch, replyMarkup) {
+		const media = [];
+
+		for (let i = 0; i < attachments.length; i++) {
+			const att = attachments[i];
+			const mediaItem = {
+				type: mediaType,
+				media: `attach://${att.key}`,
+				parse_mode: 'HTML'
+			};
+
+			// 只有第一批次的第一个附件显示 caption
+			if (isFirstBatch && i === 0) {
+				mediaItem.caption = caption;
+			}
+
+			media.push(mediaItem);
+		}
+
+		const formData = new FormData();
+		formData.append('chat_id', chatId);
+		formData.append('media', JSON.stringify(media));
+
+		// 如果设置了话题ID，添加到请求中
+		if (threadId && threadId > 0) {
+			formData.append('message_thread_id', threadId);
+		}
+
+		if (replyMarkup) {
+			formData.append('reply_markup', JSON.stringify(replyMarkup));
+		}
+
+		// 添加附件文件
+		for (const att of attachments) {
+			const attachmentBuffer = await r2Service.getObj(c, att.key);
+			if (!attachmentBuffer) {
+				console.error(`附件不存在: ${att.key}`);
+				continue;
+			}
+			const buffer = await attachmentBuffer.arrayBuffer();
+			const blob = new Blob([buffer], { type: att.mimeType || 'application/octet-stream' });
+			formData.append(att.key, blob, att.filename);
+		}
+
+		const res = await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMediaGroup`, {
+			method: 'POST',
+			body: formData
+		});
+
+		if (!res.ok) {
+			console.error(`发送媒体组失败 status: ${res.status} response: ${await res.text()}`);
+			return null;
+		} else {
+			const resData = await res.json();
+			console.log(`媒体组发送成功，共 ${attachments.length} 个 ${mediaType} 项目`);
+			return resData;
+		}
+	},
+
+	/**
 	 * 发送媒体组（多张图片/文件 + 文字 caption）在同一条消息中
 	 * Telegram 的 sendMediaGroup 最多支持 10 个媒体项目
 	 * 返回 TG API 的响应数组（用于归档记录 file_id）
@@ -260,79 +322,39 @@ const telegramService = {
 			const isFirstBatch = batchIndex === 0;
 			const isLastBatch = batchIndex === batches.length - 1;
 
-			const media = [];
-
-			for (let i = 0; i < batch.length; i++) {
-				const att = batch[i];
-				const isImage = att.mimeType && att.mimeType.startsWith('image/');
-				const inputType = isImage ? 'photo' : 'document';
-
-				const mediaItem = {
-					type: inputType,
-					media: `attach://${att.key}`,
-					parse_mode: 'HTML'
-				};
-
-				// 只有第一张图片/文件的 caption 会生效
-				if (isFirstBatch && i === 0) {
-					mediaItem.caption = caption;
-				}
-
-				media.push(mediaItem);
-			}
+			// 分离图片和文档（sendMediaGroup 不允许混合类型）
+			const images = batch.filter(att => att.mimeType && att.mimeType.startsWith('image/'));
+			const documents = batch.filter(att => !att.mimeType || !att.mimeType.startsWith('image/'));
 
 			// 最后一批添加查看按钮
-			let replyMarkup = undefined;
-			if (isLastBatch && webAppUrl) {
-				replyMarkup = {
-					inline_keyboard: [
-						[
-							{
-								text: '查看',
-								url: webAppUrl
-							}
-						]
+			const replyMarkup = (isLastBatch && webAppUrl) ? {
+				inline_keyboard: [
+					[
+						{
+							text: '查看',
+							url: webAppUrl
+						}
 					]
-				};
-			}
+				]
+			} : undefined;
 
-			const formData = new FormData();
-			formData.append('chat_id', chatId);
-			formData.append('media', JSON.stringify(media));
-
-			// 如果设置了话题ID，添加到请求中
-			if (threadId && threadId > 0) {
-				formData.append('message_thread_id', threadId);
-			}
-
-			if (replyMarkup) {
-				formData.append('reply_markup', JSON.stringify(replyMarkup));
-			}
-
-			// 添加附件文件
-			for (const att of batch) {
-				const attachmentBuffer = await r2Service.getObj(c, att.key);
-				if (!attachmentBuffer) {
-					console.error(`附件不存在: ${att.key}`);
-					continue;
+			// 分别发送图片组和文档组
+			if (images.length > 0) {
+				const mediaResult = await this.sendMediaGroupByType(c, tgBotToken, chatId, threadId, images, caption, 'photo', isFirstBatch, replyMarkup);
+				if (mediaResult) {
+					results.push(mediaResult);
+				} else {
+					results.push(null);
 				}
-				const buffer = await attachmentBuffer.arrayBuffer();
-				const blob = new Blob([buffer], { type: att.mimeType || 'application/octet-stream' });
-				formData.append(att.key, blob, att.filename);
 			}
 
-			const res = await fetch(`https://api.telegram.org/bot${tgBotToken}/sendMediaGroup`, {
-				method: 'POST',
-				body: formData
-			});
-
-			if (!res.ok) {
-				console.error(`发送媒体组失败 status: ${res.status} response: ${await res.text()}`);
-				results.push(null);
-			} else {
-				const resData = await res.json();
-				results.push(resData);
-				console.log(`媒体组发送成功，共 ${batch.length} 个项目`);
+			if (documents.length > 0) {
+				const mediaResult = await this.sendMediaGroupByType(c, tgBotToken, chatId, threadId, documents, caption, 'document', isFirstBatch, replyMarkup);
+				if (mediaResult) {
+					results.push(mediaResult);
+				} else {
+					results.push(null);
+				}
 			}
 		}
 
