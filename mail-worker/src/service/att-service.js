@@ -13,24 +13,31 @@ import settingService from "./setting-service";
 const attService = {
 
 	async addAtt(c, attachments) {
+		// 分批处理附件，避免 SQL 变量超限（D1 限制 999）
+		const BATCH_SIZE = 50;
 
-		// 使用 Promise.all 并行上传所有附件到 R2
-		await Promise.all(attachments.map(async (attachment) => {
-			let metadate = {
-				contentType: attachment.mimeType,
-			}
+		for (let i = 0; i < attachments.length; i += BATCH_SIZE) {
+			const batch = attachments.slice(i, i + BATCH_SIZE);
 
-			if (!attachment.contentId) {
-				metadate.contentDisposition = `attachment;filename=${attachment.filename}`
-			} else {
-				metadate.contentDisposition = `inline;filename=${attachment.filename}`
-				metadate.cacheControl = `max-age=259200`
-			}
+			// 使用 Promise.all 并行上传本批次附件到 R2
+			await Promise.all(batch.map(async (attachment) => {
+				let metadate = {
+					contentType: attachment.mimeType,
+				}
 
-			await r2Service.putObj(c, attachment.key, attachment.content, metadate);
-		}));
+				if (!attachment.contentId) {
+					metadate.contentDisposition = `attachment;filename=${attachment.filename}`
+				} else {
+					metadate.contentDisposition = `inline;filename=${attachment.filename}`
+					metadate.cacheControl = `max-age=259200`
+				}
 
-		await orm(c).insert(att).values(attachments).run();
+				await r2Service.putObj(c, attachment.key, attachment.content, metadate);
+			}));
+
+			// 分批插入数据库
+			await orm(c).insert(att).values(batch).run();
+		}
 	},
 
 	list(c, params, userId) {
@@ -137,8 +144,8 @@ const attService = {
 	},
 
 	async saveSendAtt(c, attList, userId, accountId, emailId) {
-
 		const attDataList = [];
+		const BATCH_SIZE = 50;
 
 		for (let att of attList) {
 			att.buff = fileUtils.base64ToUint8Array(att.content);
@@ -152,7 +159,11 @@ const attService = {
 			attDataList.push(attData);
 		}
 
-		await orm(c).insert(att).values(attDataList).run();
+		// 分批插入数据库
+		for (let i = 0; i < attDataList.length; i += BATCH_SIZE) {
+			const batch = attDataList.slice(i, i + BATCH_SIZE);
+			await orm(c).insert(att).values(batch).run();
+		}
 
 		// 使用 Promise.all 并行上传所有附件到 R2
 		await Promise.all(attList.map(att => r2Service.putObj(c, att.key, att.buff, {
@@ -184,9 +195,13 @@ const attService = {
 			contentDisposition: `inline;filename=${attData.filename}`
 		})));
 
-		// 清理 buff 字段后批量插入数据库
+		// 清理 buff 字段后分批插入数据库
 		validAttDataList.forEach(attData => delete attData.buff);
-		await orm(c).insert(att).values(validAttDataList).run();
+		const BATCH_SIZE = 50;
+		for (let i = 0; i < validAttDataList.length; i += BATCH_SIZE) {
+			const batch = validAttDataList.slice(i, i + BATCH_SIZE);
+			await orm(c).insert(att).values(batch).run();
+		}
 
 	},
 
@@ -212,22 +227,27 @@ const attService = {
 		if (sourceAtts.length === 0) {
 			return;
 		}
-		const newAtts = sourceAtts.map(sourceAtt => ({
-			userId: targetUserId,
-			emailId: targetEmailId,
-			accountId: targetAccountId,
-			key: sourceAtt.key,
-			filename: sourceAtt.filename,
-			mimeType: sourceAtt.mimeType,
-			size: sourceAtt.size,
-			status: sourceAtt.status,
-			type: sourceAtt.type,
-			disposition: sourceAtt.disposition,
-			related: sourceAtt.related,
-			contentId: sourceAtt.contentId,
-			encoding: sourceAtt.encoding
-		}));
-		await orm(c).insert(att).values(newAtts).run();
+		// 分批处理附件复制，避免 SQL 变量超限
+		const BATCH_SIZE = 50;
+		for (let i = 0; i < sourceAtts.length; i += BATCH_SIZE) {
+			const batch = sourceAtts.slice(i, i + BATCH_SIZE);
+			const newAtts = batch.map(sourceAtt => ({
+				userId: targetUserId,
+				emailId: targetEmailId,
+				accountId: targetAccountId,
+				key: sourceAtt.key,
+				filename: sourceAtt.filename,
+				mimeType: sourceAtt.mimeType,
+				size: sourceAtt.size,
+				status: sourceAtt.status,
+				type: sourceAtt.type,
+				disposition: sourceAtt.disposition,
+				related: sourceAtt.related,
+				contentId: sourceAtt.contentId,
+				encoding: sourceAtt.encoding
+			}));
+			await orm(c).insert(att).values(newAtts).run();
+		}
 	},
 
 	async removeAttByField(c, fieldName, fieldValues) {

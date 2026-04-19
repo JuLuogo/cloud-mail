@@ -556,7 +556,7 @@ const emailService = {
 			// 批量插入所有邮件
 			const insertedEmails = await orm(c).insert(email).values(receiveEmailList).returning().all();
 
-			// 如果有附件，批量插入附件（每个邮件对应所有附件）
+			// 如果有附件，分批插入附件（每个邮件对应所有附件）
 			if (attList.length > 0) {
 				const attValuesList = [];
 				for (const emailRow of insertedEmails) {
@@ -570,8 +570,12 @@ const emailService = {
 						});
 					}
 				}
-				// 批量插入所有附件
-				await orm(c).insert(att).values(attValuesList).run();
+				// 分批插入附件，避免 SQL 变量超限
+				const BATCH_SIZE = 50;
+				for (let i = 0; i < attValuesList.length; i += BATCH_SIZE) {
+					const batch = attValuesList.slice(i, i + BATCH_SIZE);
+					await orm(c).insert(att).values(batch).run();
+				}
 			}
 		}
 
